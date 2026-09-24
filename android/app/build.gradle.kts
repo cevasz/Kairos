@@ -52,9 +52,37 @@ android {
         }
     }
 
+    // Dos canales de la misma app, instalables uno junto al otro (§51):
+    //   prod  «Kairós»      la estable: la que se comparte y se publica en
+    //                        GitHub, firmada con la clave de release.
+    //   dev   «Kairós Dev»  la de trabajo: otro id, otro nombre, ícono en
+    //                        terracota y la firma de este equipo.
+    // Cada una tiene sus propios datos; se pasan con la copia de seguridad.
+    // `resValue` fija el nombre de cada canal; AGP lo trae apagado.
+    buildFeatures {
+        resValues = true
+    }
+
+    flavorDimensions += "canal"
+    productFlavors {
+        create("prod") {
+            dimension = "canal"
+            resValue("string", "app_name", "Kairós")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+        }
+        create("dev") {
+            dimension = "canal"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            resValue("string", "app_name", "Kairós Dev")
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
     buildTypes {
         release {
-            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
+            // La firma la decide el canal (arriba), no el tipo de compilación.
+            signingConfig = null
         }
     }
 }

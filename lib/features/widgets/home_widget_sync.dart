@@ -22,6 +22,11 @@ import '../travel/application/travel_providers.dart';
 /// Nombres de las clases Kotlin de los dos widgets.
 const List<String> kHomeWidgetProviders = ['NextClassWidgetProvider', 'TodayWidgetProvider', 'PendingWidgetProvider'];
 
+/// El paquete de las clases Kotlin (el `namespace` de Gradle). No es el id de
+/// la app: «Kairós Dev» se instala como `com.kairos.app.dev` pero sus
+/// widgets siguen en este paquete, así que se nombran completos (§51).
+const String kWidgetPackage = 'com.kairos.app';
+
 /// Clave de SharedPreferences que leen los widgets.
 const String kHomeWidgetDataKey = 'kairos_upcoming';
 
@@ -213,7 +218,7 @@ Future<void> _push(Ref ref) async {
     await _renderMascots();
     await HomeWidget.saveWidgetData<String>(kHomeWidgetDataKey, payload);
     for (final name in kHomeWidgetProviders) {
-      await HomeWidget.updateWidget(androidName: name);
+      await HomeWidget.updateWidget(qualifiedAndroidName: '$kWidgetPackage.$name');
     }
     // El widget cambia solo al llegar la hora de salir, al empezar cada clase,
     // al acabar su tolerancia (ahí pasa a la siguiente), al terminar, y a
@@ -250,7 +255,7 @@ Future<void> _push(Ref ref) async {
     for (final name in kHomeWidgetProviders) {
       await HomeWidget.scheduleWidgetUpdates(
         name == 'NextClassWidgetProvider' ? perMinute : times,
-        androidName: name,
+        qualifiedAndroidName: '$kWidgetPackage.$name',
       );
     }
   } on Object {

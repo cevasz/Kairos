@@ -17,6 +17,8 @@ import '../../alarms/application/alarms_controller.dart';
 import '../../home_check/application/home_check_providers.dart';
 import '../../mascot/application/mascot_voice.dart';
 import '../../mascot/mascot_error.dart';
+import '../../backup/application/backup_controller.dart';
+import '../../backup/data/backup.dart';
 import '../../mascot/mascot_loader.dart';
 import '../../travel/application/travel_providers.dart';
 import '../../../domain/departure/travel_estimator.dart';
@@ -149,6 +151,9 @@ class _Loaded extends ConsumerWidget {
         SizedBox(height: SpaceTokens.xl),
         const _SectionLabel(SUpdates.section),
         const _UpdatesCard(),
+        SizedBox(height: SpaceTokens.xl),
+        const _SectionLabel(SBackup.section),
+        const _BackupCard(),
         SizedBox(height: SpaceTokens.xl),
         const _SectionLabel(SSettings.sectionAppearance),
         _Card(
@@ -432,6 +437,7 @@ class _UpdatesCard extends ConsumerWidget {
     final available = check.valueOrNull?.available;
 
     final subtitle = switch (check) {
+      _ when isDevBuild => SBackup.devBuild,
       AsyncLoading() => SUpdates.checking,
       AsyncData(:final value) when value.available != null =>
         SUpdates.available(version: value.available!.versionName),
@@ -668,5 +674,88 @@ class _TravelBlockState extends ConsumerState<_TravelBlock> {
         RouteCalcResult.offline => SSettings.routeOffline,
       }),
     ));
+  }
+}
+
+/// Exportar y restaurar la copia de seguridad (§51). Restaurar pide
+/// confirmación: reemplaza todo lo que hay.
+class _BackupCard extends ConsumerStatefulWidget {
+  const _BackupCard();
+
+  @override
+  ConsumerState<_BackupCard> createState() => _BackupCardState();
+}
+
+class _BackupCardState extends ConsumerState<_BackupCard> {
+  bool _busy = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Card(
+      children: [
+        _Row(
+          title: SBackup.export,
+          subtitle: SBackup.exportHint,
+          trailing: IconButton(
+            tooltip: SBackup.export,
+            onPressed: _busy ? null : _export,
+            icon: const Icon(Icons.save_alt_outlined),
+          ),
+        ),
+        SizedBox(height: SpaceTokens.s),
+        _Row(
+          title: SBackup.restore,
+          subtitle: SBackup.restoreHint,
+          trailing: IconButton(
+            tooltip: SBackup.restore,
+            onPressed: _busy ? null : _restore,
+            icon: const Icon(Icons.settings_backup_restore_outlined),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _export() async {
+    final messenger = ScaffoldMessenger.of(context);
+    setState(() => _busy = true);
+    final result = await ref.read(backupControllerProvider).export();
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (result == ExportResult.cancelled) return;
+    messenger.showSnackBar(SnackBar(
+      content: Text(result == ExportResult.saved ? SBackup.exported : SBackup.exportFailed),
+    ));
+  }
+
+  Future<void> _restore() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(SBackup.restoreTitle),
+        content: const Text(SBackup.restoreBody),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text(SBackup.cancel)),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text(SBackup.restoreConfirm)),
+        ],
+      ),
+    );
+    if (sure != true || !mounted) return;
+    // La controladora cierra la base y la reabre: se lee antes de que esta
+    // pantalla se reconstruya con los datos nuevos.
+    final controller = ref.read(backupControllerProvider);
+    setState(() => _busy = true);
+    final result = await controller.restore();
+    if (mounted) setState(() => _busy = false);
+    final text = switch (result) {
+      ImportCancelled() => null,
+      ImportDoneResult() => SBackup.restored,
+      ImportRejected(problem: BackupProblem.notADatabase) => SBackup.notADatabase,
+      ImportRejected(problem: BackupProblem.foreign) => SBackup.foreign,
+      ImportRejected(problem: BackupProblem.tooNew) => SBackup.tooNew,
+      ImportRejected() => SBackup.restoreFailed,
+    };
+    if (text != null) messenger.showSnackBar(SnackBar(content: Text(text)));
   }
 }

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- «Kairós Dev»: el mismo símbolo sobre terracota, para no confundirla
+         con la estable en el lanzador. -->
+    <color name="ic_launcher_background">#B05B3E</color>
+</resources>

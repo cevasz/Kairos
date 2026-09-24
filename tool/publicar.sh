@@ -3,25 +3,27 @@
 #
 #   tool/publicar.sh 0.2.0 "Notas de la versión"
 #
-# La primera vez sube los secretos de firma con la clave que firma la app ya
-# instalada en el teléfono (~/.android/debug.keystore): así la versión nueva
-# se instala encima sin perder datos. Necesita `gh auth login` hecho.
+# Firma la estable (canal «prod», §51) con la clave de release de
+# ~/.claves/kairos-release.properties. `--secretos` vuelve a subir los
+# secretos de firma a GitHub (la primera vez o si la clave cambia).
+# Necesita `gh auth login` hecho.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-VERSION="${1:?Uso: tool/publicar.sh X.Y.Z \"notas\"}"
+VERSION="${1:?Uso: tool/publicar.sh X.Y.Z \"notas\" [--secretos]}"
 NOTES="${2:-Kairós $VERSION}"
 REPO="cevasz/Kairos"
-KEYSTORE="${KAIROS_KEYSTORE:-$HOME/.android/debug.keystore}"
+PROPS="${KAIROS_KEY_PROPS:-$HOME/.claves/kairos-release.properties}"
+prop() { grep "^$1=" "$PROPS" | cut -d= -f2-; }
 
 gh auth status >/dev/null 2>&1 || { echo "Falta: gh auth login"; exit 1; }
 
-if ! gh secret list -R "$REPO" | grep -q ANDROID_KEYSTORE_BASE64; then
-  echo "Subiendo los secretos de firma ($KEYSTORE)…"
-  base64 -w0 "$KEYSTORE" | gh secret set ANDROID_KEYSTORE_BASE64 -R "$REPO"
-  gh secret set ANDROID_KEYSTORE_PASSWORD -R "$REPO" -b "${KAIROS_STORE_PASSWORD:-android}"
-  gh secret set ANDROID_KEY_ALIAS -R "$REPO" -b "${KAIROS_KEY_ALIAS:-androiddebugkey}"
-  gh secret set ANDROID_KEY_PASSWORD -R "$REPO" -b "${KAIROS_KEY_PASSWORD:-android}"
+if [ "${3:-}" = "--secretos" ] || ! gh secret list -R "$REPO" | grep -q ANDROID_KEY_PASSWORD; then
+  echo "Subiendo los secretos de firma ($(prop storeFile))…"
+  base64 -w0 "$(prop storeFile)" | gh secret set ANDROID_KEYSTORE_BASE64 -R "$REPO"
+  gh secret set ANDROID_KEYSTORE_PASSWORD -R "$REPO" -b "$(prop storePassword)"
+  gh secret set ANDROID_KEY_ALIAS -R "$REPO" -b "$(prop keyAlias)"
+  gh secret set ANDROID_KEY_PASSWORD -R "$REPO" -b "$(prop keyPassword)"
 fi
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"

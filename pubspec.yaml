@@ -18,6 +18,8 @@ dependencies:
   # Base de datos local (offline-first)
   drift: ^2.34.0
   sqlite3_flutter_libs: ^0.5.24
+  # Validar una copia de seguridad antes de restaurarla (§51).
+  sqlite3: ^3.5.2
   path_provider: ^2.1.4
   path: ^1.9.0
 

@@ -1,11 +1,15 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart' show appFlavor;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../core/platform/update_channel.dart';
 import '../../../domain/updates/update_manifest.dart';
+
+/// La compilación de trabajo (`--flavor dev`): «Kairós Dev».
+bool get isDevBuild => appFlavor == 'dev';
 
 final updateChannelProvider = Provider<UpdateChannel>((ref) => UpdateChannel());
 
@@ -35,6 +39,9 @@ class UpdateCheck {
 final updateCheckProvider = FutureProvider<UpdateCheck>((ref) async {
   final channel = ref.watch(updateChannelProvider);
   final installed = await channel.installed();
+  // «Kairós Dev» se instala por cable desde el equipo: las versiones de
+  // GitHub son de la estable, con otro id, y no le sirven (§51).
+  if (isDevBuild) return UpdateCheck(installed: installed, latest: null);
   final latest = await channel.fetchManifest();
   return UpdateCheck(installed: installed, latest: latest);
 });

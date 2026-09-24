@@ -1,10 +1,12 @@
 # Publica una versión de Kairós que el teléfono puede instalar sin cable.
 #
 # Se dispara al subir un tag `vX.Y.Z` (git tag -a v0.2.0 -m "notas" && git
-# push origin v0.2.0). Compila, pasa los tests, firma con la misma clave de la
-# app instalada y publica un Release con:
-#   kairos.apk    la app
-#   version.json   lo que la app lee para saber si hay algo nuevo
+# push origin v0.2.0). Compila la estable (canal «prod», §51), pasa los tests,
+# la firma con la clave de release (~/.claves/kairos-release.jks en el equipo
+# de Sebastián) y publica un Release con:
+#   kairos.apk            la app (arm64: casi todos los teléfonos de hoy)
+#   kairos-universal.apk  la misma para teléfonos de 32 bits
+#   version.json           lo que la app lee para saber si hay algo nuevo
 #
 # El APK es público (el repositorio lo es), así que se compila SIN la clave de
 # la API de Claude: el importador usa el lector propio de horarios.
@@ -78,10 +80,13 @@ jobs:
           # El versionCode crece con cada publicación y siempre supera al de
           # las compilaciones locales (que usan el +1 de pubspec).
           CODE=$(( GITHUB_RUN_NUMBER + 1 ))
-          # Solo arm64: es lo que usan los teléfonos de hoy (el Galaxy A56
-          # incluido) y la descarga pesa un tercio que el APK universal.
-          flutter build apk --release --target-platform android-arm64 --build-name="$NAME" --build-number="$CODE"
-          cp build/app/outputs/flutter-apk/app-release.apk kairos.apk
+          # La estable es el canal «prod» (§51). Se publican dos APK: el de
+          # arm64, que es el que baja el aviso de la app (pesa un tercio), y
+          # uno universal para teléfonos de 32 bits.
+          flutter build apk --release --flavor prod --target-platform android-arm64 --build-name="$NAME" --build-number="$CODE"
+          cp build/app/outputs/flutter-apk/app-prod-release.apk kairos.apk
+          flutter build apk --release --flavor prod --build-name="$NAME" --build-number="$CODE"
+          cp build/app/outputs/flutter-apk/app-prod-release.apk kairos-universal.apk
           # checkout deja el tag como ligero (sin notas): se trae el anotado.
           git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
           NOTES=$(git tag -l --format='%(contents)' "$TAG" | sed '/^-----BEGIN/,$d')
@@ -104,4 +109,5 @@ jobs:
           body: ${{ steps.build.outputs.notes }}
           files: |
             kairos.apk
+            kairos-universal.apk
             version.json
