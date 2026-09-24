@@ -56,7 +56,7 @@ class RoomPin extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (isNext) ...[
-                  Icon(Icons.school, size: IconTokens.sizeXs, color: ColorTokens.textOnSubject.of(b)),
+                  Icon(Icons.near_me, size: IconTokens.sizeXs, color: ColorTokens.textOnSubject.of(b)),
                   SizedBox(width: SpaceTokens.xs),
                 ],
                 Flexible(

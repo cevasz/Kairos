@@ -13,7 +13,7 @@ import '../../today/presentation/today_screen.dart';
 import '../../updates/application/update_providers.dart';
 import '../../updates/presentation/update_sheet.dart';
 import '../../customize/presentation/customize_screen.dart';
-import '../../import/presentation/import_pdf_screen.dart';
+import '../../import/presentation/import_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import 'widgets/radial_menu.dart';
 
@@ -26,7 +26,8 @@ abstract final class ShellTab {
   static const int map = 3;
 }
 
-/// Las cuatro pantallas y las acciones de siempre. La navegación entre ellas
+/// Las cuatro pantallas (Hoy, Semana, Actividades, Lugares) y las acciones de
+/// siempre (importar calendario, nueva actividad, personalizar, ajustes). La navegación entre ellas
 /// NUNCA vibra: está en la lista `never` del contrato háptico.
 ///
 /// En teléfono es un menú radial al modo de Concepts (§49): un botón en la
@@ -46,7 +47,7 @@ class AppShell extends ConsumerStatefulWidget {
   static const _icons = <IconData>[
     Icons.schedule_outlined,
     Icons.calendar_today_outlined,
-    Icons.menu_book_outlined,
+    Icons.event_repeat_outlined,
     Icons.place_outlined,
   ];
 
@@ -55,7 +56,7 @@ class AppShell extends ConsumerStatefulWidget {
   static const _selectedIcons = <IconData>[
     Icons.schedule,
     Icons.calendar_today,
-    Icons.menu_book,
+    Icons.event_repeat,
     Icons.place,
   ];
 
@@ -91,7 +92,7 @@ class _AppShellState extends ConsumerState<AppShell> with SingleTickerProviderSt
       ];
 
   List<RadialItem> _actionItems() => [
-        RadialItem(icon: Icons.upload_file_outlined, label: SNav.import, onSelect: () => openImportPdf(context)),
+        RadialItem(icon: Icons.event_available_outlined, label: SNav.import, onSelect: () => openImport(context)),
         RadialItem(icon: Icons.add_circle_outline, label: SNav.addSubject, onSelect: () => openSubjectForm(context)),
         RadialItem(icon: Icons.palette_outlined, label: SNav.customize, onSelect: () => openCustomize(context)),
         RadialItem(icon: Icons.settings_outlined, label: SNav.settings, onSelect: () => openSettings(context)),
