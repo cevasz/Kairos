@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:kairos/domain/attendance/attendance.dart';
@@ -12,7 +14,7 @@ void main() {
   group('VariantPicker', () {
     test('nunca repite la misma frase dos veces seguidas', () {
       final picker = VariantPicker(math.Random(7));
-      final lines = SMascotVoice.aphorisms;
+      const lines = SMascotVoice.aphorisms;
       var previous = picker.pick(lines);
       for (var i = 0; i < 200; i++) {
         final next = picker.pick(lines);
@@ -30,11 +32,32 @@ void main() {
   });
 
   test('las variantes con huecos salen llenas, sin llaves sueltas', () {
-    final lines = SMascotVoice.nextClassVariants(clase: 'Física', hora: '8:00', salon: '302E', salida: '7:35');
+    final lines = SMascotVoice.nextClassVariants(clase: 'Gimnasio', hora: '8:00', salon: 'Sede norte', salida: '7:35');
     expect(lines, hasLength(greaterThan(1)));
     for (final l in lines) {
-      expect(l, contains('Física'));
+      expect(l, contains('Gimnasio'));
       expect(l, isNot(contains('{')));
+    }
+  });
+
+  test('la voz es de la vida diaria: nada de estudios', () {
+    // Kairós no es Cátedra. Se lee el contrato tal cual (sin los huecos, que
+    // son nombres internos) para que ninguna frase nueva se cuele.
+    final tokens = jsonDecode(File('design/tokens.json').readAsStringSync()) as Map<String, dynamic>;
+    final voice = (tokens['copy'] as Map<String, dynamic>)['mascotVoice'] as Map<String, dynamic>;
+    final study = RegExp(
+      r'\b(clases?|materias?|parcial(es)?|notas?|profes?|profesor(es|as?)?|semestres?|universidad|estudi\w*)\b',
+      caseSensitive: false,
+    );
+    for (final entry in voice.entries) {
+      if (entry.key.startsWith(r'$')) continue;
+      final lines = entry.value is List ? (entry.value as List).cast<String>() : [entry.value as String];
+      for (final line in lines) {
+        final visible = line.replaceAll(RegExp(r'\{\w+\}'), '');
+        expect(study.hasMatch(visible), isFalse, reason: '${entry.key}: «$line»');
+        expect(visible.toLowerCase(), isNot(contains('salón')), reason: '${entry.key}: «$line»');
+        expect(visible.toLowerCase(), isNot(contains('lámpara')), reason: 'ya no lleva lámpara: ${entry.key}');
+      }
     }
   });
 
@@ -97,7 +120,7 @@ void main() {
     });
   });
 
-  test('marcar una clase se comenta; justificada y posible falta, no', () {
+  test('marcar un bloque se comenta; justificado y posible salto, no', () {
     expect(reactionForStatus(SessionStatus.asistio), MascotReaction.attended);
     expect(reactionForStatus(SessionStatus.falto), MascotReaction.absence);
     expect(reactionForStatus(SessionStatus.canceladaProfe), MascotReaction.cancelled);

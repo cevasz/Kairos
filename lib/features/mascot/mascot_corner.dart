@@ -37,7 +37,7 @@ class MascotCorner extends ConsumerWidget {
     final guard = MotionGuard.of(context);
     final slide = guard.duration(MotionDurations.mascotCornerSlide);
     final curve = guard.curve(MotionCurves.easeOutCubic);
-    final size = MascotTokens.sizeCorner;
+    const size = MascotTokens.sizeCorner;
     final speaking = line != null;
 
     // A la altura de la barra inferior del shell, que es donde menos estorba:

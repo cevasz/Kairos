@@ -41,7 +41,7 @@ class _MascotErrorState extends State<MascotError> {
     final secondary = context.themed(ColorTokens.textSecondary);
     return Center(
       child: SingleChildScrollView(
-        padding: EdgeInsets.all(SpaceTokens.screenMargin),
+        padding: const EdgeInsets.all(SpaceTokens.screenMargin),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -51,17 +51,17 @@ class _MascotErrorState extends State<MascotError> {
               host: MascotHost.loadError,
               beat: MascotBeat.stumble,
             ),
-            SizedBox(height: SpaceTokens.l),
+            const SizedBox(height: SpaceTokens.l),
             Text(_title, textAlign: TextAlign.center, style: context.type(TypeTokens.titleM)),
-            SizedBox(height: SpaceTokens.s),
+            const SizedBox(height: SpaceTokens.s),
             Text(
               SLoadError.body,
               textAlign: TextAlign.center,
               style: context.type(TypeTokens.bodyM, color: secondary),
             ),
-            SizedBox(height: SpaceTokens.xl),
+            const SizedBox(height: SpaceTokens.xl),
             FilledButton(onPressed: widget.onRetry, child: const Text(SLoadError.retry)),
-            SizedBox(height: SpaceTokens.s),
+            const SizedBox(height: SpaceTokens.s),
             TextButton(
               onPressed: () => setState(() => _details = !_details),
               child: Text(_details ? SLoadError.hideDetails : SLoadError.details),
