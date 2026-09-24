@@ -1,5 +1,4 @@
 import 'package:kairos/features/mascot/mascot_view.dart';
-import 'package:kairos/theme/app_theme.dart';
 import 'package:kairos/theme/tokens.g.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -42,21 +41,4 @@ void main() {
       await expectLater(find.byType(RepaintBoundary).first, matchesGoldenFile('goldens/mascot_still_$name.png'));
     });
   }
-
-  testWidgets('el ánfora de figuras negras, tenue como va de fondo', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.light(),
-        home: const MediaQuery(
-          // Quieta: la imagen es la de su primer fotograma.
-          data: MediaQueryData(disableAnimations: true),
-          child: Center(
-            child: MascotVase(pose: MascotPose.reposo),
-          ),
-        ),
-      ),
-    );
-    await tester.pump();
-    await expectLater(find.byType(MascotVase), matchesGoldenFile('goldens/mascot_vase.png'));
-  });
 }

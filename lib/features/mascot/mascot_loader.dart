@@ -9,7 +9,7 @@ import '../../theme/transitions.dart';
 import 'application/mascot_voice.dart';
 import 'mascot_view.dart';
 
-/// Erizógenes corriendo con su lámpara mientras algo carga, en lugar de un
+/// Erizógenes corriendo con su monóculo mientras algo carga, en lugar de un
 /// spinner.
 ///
 /// Si la espera pasa de [MotionDurations.mascotLoaderLong] se cansa: corre
@@ -72,15 +72,15 @@ class _MascotLoaderState extends State<MascotLoader> {
     if (inline) {
       return Row(
         mainAxisSize: MainAxisSize.min,
-        children: [mascot, SizedBox(width: SpaceTokens.m), Flexible(child: text)],
+        children: [mascot, const SizedBox(width: SpaceTokens.m), Flexible(child: text)],
       );
     }
     return Center(
       child: Padding(
-        padding: EdgeInsets.all(SpaceTokens.screenMargin),
+        padding: const EdgeInsets.all(SpaceTokens.screenMargin),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          children: [mascot, SizedBox(height: SpaceTokens.l), text],
+          children: [mascot, const SizedBox(height: SpaceTokens.l), text],
         ),
       ),
     );

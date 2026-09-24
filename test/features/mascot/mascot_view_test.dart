@@ -101,21 +101,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('el ánfora pinta la figura y bajo reduced-motion no anima', (tester) async {
-    for (final reduced in [false, true]) {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.dark(),
-          home: MediaQuery(
-            data: MediaQueryData(disableAnimations: reduced),
-            child: const Center(child: MascotVase(pose: MascotPose.dormido)),
-          ),
-        ),
-      );
-      await tester.pump(MotionDurations.mascotBreathe);
-      expect(tester.takeException(), isNull);
-      expect(tester.binding.hasScheduledFrame, !reduced ? isTrue : isFalse);
-    }
+  testWidgets('el ánfora está retirada: no pinta nada ni ocupa sitio', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: const Center(child: MascotVase(pose: MascotPose.dormido)),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+    expect(tester.getSize(find.byType(MascotVase)), Size.zero);
+    expect(find.byType(CustomPaint).evaluate().where((e) => (e.widget as CustomPaint).painter != null), isEmpty);
   });
 
   dynamic state(WidgetTester tester) => tester.state(find.byType(MascotView));

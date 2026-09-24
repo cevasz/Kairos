@@ -120,10 +120,10 @@ class _MascotCompanionState extends ConsumerState<MascotCompanion> {
       return Column(
         children: [
           mascot,
-          SizedBox(height: SpaceTokens.xl),
-          if (widget.heroTitle != null) ...[widget.heroTitle!, SizedBox(height: SpaceTokens.s)],
+          const SizedBox(height: SpaceTokens.xl),
+          if (widget.heroTitle != null) ...[widget.heroTitle!, const SizedBox(height: SpaceTokens.s)],
           GestureDetector(onTap: () => _next(tips.length), child: line),
-          if (dots != null) ...[SizedBox(height: SpaceTokens.s), dots],
+          if (dots != null) ...[const SizedBox(height: SpaceTokens.s), dots],
         ],
       );
     }
@@ -132,7 +132,7 @@ class _MascotCompanionState extends ConsumerState<MascotCompanion> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         mascot,
-        SizedBox(width: SpaceTokens.s),
+        const SizedBox(width: SpaceTokens.s),
         Expanded(
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -147,7 +147,7 @@ class _MascotCompanionState extends ConsumerState<MascotCompanion> {
                     alignment: Alignment.topLeft,
                     child: line,
                   ),
-                  if (dots != null) ...[SizedBox(height: SpaceTokens.s), dots],
+                  if (dots != null) ...[const SizedBox(height: SpaceTokens.s), dots],
                 ],
               ),
             ),
@@ -160,7 +160,7 @@ class _MascotCompanionState extends ConsumerState<MascotCompanion> {
 
 /// Globo de diálogo con la cola hacia el erizo, abajo a la izquierda.
 class MascotBubble extends StatelessWidget {
-  const MascotBubble({required this.child});
+  const MascotBubble({super.key, required this.child});
   final Widget child;
 
   @override
@@ -171,8 +171,8 @@ class MascotBubble extends StatelessWidget {
     return CustomPaint(
       painter: _TailPainter(fill: fill, border: border),
       child: Container(
-        margin: EdgeInsets.only(left: SpaceTokens.s),
-        padding: EdgeInsets.symmetric(horizontal: SpaceTokens.m, vertical: SpaceTokens.m),
+        margin: const EdgeInsets.only(left: SpaceTokens.s),
+        padding: const EdgeInsets.symmetric(horizontal: SpaceTokens.m, vertical: SpaceTokens.m),
         decoration: BoxDecoration(
           color: fill,
           borderRadius: BorderRadius.circular(RadiusTokens.card),
@@ -229,7 +229,7 @@ class _Dots extends StatelessWidget {
           AnimatedContainer(
             duration: MotionGuard.of(context).duration(MotionDurations.fast),
             curve: MotionCurves.easeOutCubic,
-            margin: EdgeInsets.only(right: SpaceTokens.xs),
+            margin: const EdgeInsets.only(right: SpaceTokens.xs),
             width: i == active ? SpaceTokens.m : SpaceTokens.xs + SpaceTokens.xs / 2,
             height: SpaceTokens.xs + SpaceTokens.xs / 2,
             decoration: BoxDecoration(

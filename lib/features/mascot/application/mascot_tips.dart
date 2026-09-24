@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/db/daos/tasks_dao.dart';
 import '../../../core/providers.dart';
 import '../../../core/time/minutes_of_day.dart';
 import '../../../domain/attendance/absence_state.g.dart';
 import '../../../l10n/strings.g.dart';
 import '../../subjects/application/subjects_providers.dart';
+import '../../tasks/application/tasks_providers.dart';
 import '../../today/application/today_providers.dart';
 import '../../today/presentation/widgets/day_timeline.dart';
 import '../mascot_view.dart';
@@ -17,8 +19,8 @@ class MascotTip {
   final MascotPose pose;
 }
 
-/// Cuántos días antes empieza a avisar de una evaluación o de la fecha límite
-/// de cancelación. Más lejos que eso es ruido.
+/// Cuántos días antes empieza a avisar de un pendiente con fecha. Más lejos
+/// que eso es ruido.
 const int kTipLookaheadDays = 7;
 
 /// Los consejos del día, del más urgente al más tranquilo.
@@ -26,12 +28,14 @@ const int kTipLookaheadDays = 7;
 /// No inventa nada: cada frase sale de un dato que ya está en la app. Si no
 /// hay nada que decir, dice que no hay nada en riesgo, que también es útil.
 ///
-/// Nunca menciona una materia perdida: el contrato prohíbe la mascota ahí,
-/// porque una cara tierna junto a esa noticia se siente burlona.
+/// Habla de la vida diaria: cuándo salir, saltos que quedan, pendientes que
+/// vencen, huecos. Nunca de una actividad ya perdida: el contrato prohíbe la
+/// mascota ahí, porque una cara tierna junto a esa noticia se siente burlona.
 final mascotTipsProvider = Provider<List<MascotTip>>((ref) {
   final today = ref.watch(todayProvider);
   final state = ref.watch(todayStateProvider).valueOrNull;
   final cards = ref.watch(subjectsOverviewProvider).valueOrNull ?? const <SubjectCard>[];
+  final pending = ref.watch(pendingProvider).valueOrNull ?? const <PendingItem>[];
 
   final tips = <MascotTip>[];
 
@@ -67,7 +71,7 @@ final mascotTipsProvider = Provider<List<MascotTip>>((ref) {
 
   final live = cards.where((c) => !c.subject.cancelada && !c.subject.archivada).toList();
 
-  // 2. Faltas: solo riesgo, nunca perdida.
+  // 2. Saltos permitidos: solo riesgo, nunca perdida.
   for (final c in live) {
     if (c.tally.state != AbsenceState.risk) continue;
     tips.add(MascotTip(
@@ -78,28 +82,27 @@ final mascotTipsProvider = Provider<List<MascotTip>>((ref) {
     ));
   }
 
-  // 3. Evaluaciones sin nota en los próximos días.
+  // 3. Pendientes que vencen en los próximos días.
   final horizon = today.add(const Duration(days: kTipLookaheadDays));
-  for (final c in live) {
-    for (final e in c.evaluations) {
-      final f = e.fecha;
-      if (f == null || e.nota != null) continue;
-      final evalDay = DateTime(f.year, f.month, f.day);
-      if (evalDay.isBefore(today) || evalDay.isAfter(horizon)) continue;
-      tips.add(MascotTip(
-        evalDay == today
-            ? v(SMascotVoice.evalTodayVariants(eval: e.nombre, clase: c.subject.nombre), e.id)
-            : v(
-                SMascotVoice.evalSoonVariants(
-                  eval: e.nombre,
-                  clase: c.subject.nombre,
-                  dia: '${SWeek.days[evalDay.weekday - 1]} ${evalDay.day}',
-                ),
-                e.id,
+  for (final item in pending) {
+    final f = item.fecha;
+    if (f == null) continue;
+    final due = DateTime(f.year, f.month, f.day);
+    if (due.isBefore(today) || due.isAfter(horizon)) continue;
+    final salt = item.titulo.hashCode;
+    tips.add(MascotTip(
+      due == today
+          ? v(SMascotVoice.evalTodayVariants(eval: item.titulo, clase: item.subject.nombre), salt)
+          : v(
+              SMascotVoice.evalSoonVariants(
+                eval: item.titulo,
+                clase: item.subject.nombre,
+                dia: '${SWeek.days[due.weekday - 1]} ${due.day}',
               ),
-        MascotPose.examinando,
-      ));
-    }
+              salt,
+            ),
+      MascotPose.examinando,
+    ));
   }
 
   // 4. El hueco más largo que todavía no pasó.
@@ -116,19 +119,7 @@ final mascotTipsProvider = Provider<List<MascotTip>>((ref) {
     }
   }
 
-  // 5. Fechas límite de cancelación cercanas.
-  for (final c in live) {
-    final f = c.subject.fechaLimiteCancelacion;
-    if (f == null) continue;
-    final days = DateTime(f.year, f.month, f.day).difference(today).inDays;
-    if (days < 0 || days > kTipLookaheadDays) continue;
-    tips.add(MascotTip(
-      v(SMascotVoice.deadlineSoonVariants(n: days, clase: c.subject.nombre), c.subject.id),
-      MascotPose.examinando,
-    ));
-  }
-
-  // 6. Sin nada en riesgo, se dice: es la mejor noticia de la pantalla.
+  // 5. Sin nada en riesgo, se dice: es la mejor noticia de la pantalla.
   if (live.isNotEmpty && live.every((c) => c.tally.state == AbsenceState.ok)) {
     tips.add(MascotTip(v(SMascotVoice.noRiskVariants), MascotPose.satisfecho));
   }
@@ -144,25 +135,23 @@ final mascotTipsProvider = Provider<List<MascotTip>>((ref) {
 });
 
 /// Qué ocurrencia viene a cuento ahora. Cada una remite a la vida de
-/// Diógenes, y el contexto decide cuál: el rollo si hay una evaluación cerca,
-/// el reloj de arena si la próxima clase está a menos de media hora, la
-/// tinaja o el sol si hoy no hay clases. Si nada aprieta, el cuenco o el gallo
-/// de Platón, alternando por día.
+/// Diógenes, y el contexto decide cuál: la lista si un pendiente vence en los
+/// próximos días, el reloj de arena si hay que salir en menos de media hora,
+/// la tinaja o el sol si hoy la agenda está vacía. Si nada aprieta, el cuenco
+/// o el gallo de Platón, alternando por día.
 final mascotAnticProvider = Provider<MascotAntic>((ref) {
   final today = ref.watch(todayProvider);
   final state = ref.watch(todayStateProvider).valueOrNull;
-  final cards = ref.watch(subjectsOverviewProvider).valueOrNull ?? const <SubjectCard>[];
+  final pending = ref.watch(pendingProvider).valueOrNull ?? const <PendingItem>[];
 
   final horizon = today.add(const Duration(days: kTipLookaheadDays));
-  final examSoon = cards.any(
-    (c) => c.evaluations.any((e) {
-      final f = e.fecha;
-      if (f == null || e.nota != null) return false;
-      final d = DateTime(f.year, f.month, f.day);
-      return !d.isBefore(today) && !d.isAfter(horizon);
-    }),
-  );
-  if (examSoon) return MascotAntic.scroll;
+  final dueSoon = pending.any((item) {
+    final f = item.fecha;
+    if (f == null) return false;
+    final d = DateTime(f.year, f.month, f.day);
+    return !d.isBefore(today) && !d.isAfter(horizon);
+  });
+  if (dueSoon) return MascotAntic.scroll;
 
   final plan = state?.plan;
   if (plan != null && !plan.isUrgent && plan.minutesUntilLeave <= kAnticClassSoonMinutes) {

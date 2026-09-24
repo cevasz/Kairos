@@ -1,34 +1,23 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// ERIZÓGENES · erizo de mar cínico, con la lámpara de Diógenes
+// ERIZÓGENES MORADO · erizo de mar cínico, con monóculo
 //
 // Se consume SOLO vía `MascotView(pose:, size:, host:)`. Ningún otro feature
 // importa la geometría ni los colores de este módulo directamente.
 //
-// EL DIBUJO (rediseño 2026-09-23, §37 y §39)
-//   Erizo de mar griego: cúpula terracota con tubérculos, agujas oscuras con
-//   la punta clara (más claras en tema oscuro, para no perder la silueta),
-//   pies tubulares y sombra. Lleva la lucerna con la que Diógenes buscaba «un
-//   hombre»: la llama dice cómo está (viva, alta al examinar, humo al dormir,
-//   casi apagada si algo no cuadra). La cara es el personaje: un párpado
+// EL DIBUJO (Kairós, docs/decisiones/01-mascota.md; Cátedra §37, `b416a89`)
+//   Erizo de mar violeta ciruela: cúpula con volumen y tubérculos, agujas en
+//   tres tonos con la punta lila (más claras en tema oscuro, con luz de borde,
+//   para no perder la silueta), pies tubulares y sombra. Lleva un monóculo de
+//   latón con su cadena: el brillo del cristal dice cómo está (vivo en
+//   reposo, encendido al examinar, apagado dormido o caído) y en «confundido»
+//   se le cae y cuelga de la cadena. La cara es el personaje: un párpado
 //   escéptico, cejas, media sonrisa y barba de tres púas. Cada pose es una
-//   combinación de cara, púas y lámpara; no hay un dibujo distinto por pose.
-//   `MascotVase` lo pinta además en un ánfora de figuras negras, de fondo.
-//   Lienzo de referencia: «Erizógenes rediseño», lámina «Elegida».
+//   combinación de cara, púas y monóculo; no hay un dibujo distinto por pose.
 //
-// PANTALLAS DONDE PUEDE APARECER
-//   A1  splash / bienvenida
-//   A3  procesando el PDF          (pose: examinando)
-//   A5  error de lectura del PDF   (pose: confundido)
-//   B1  compañero en la cabecera de Hoy, con consejos (pose según el consejo)
-//   B2  «sal ya», pequeño en la esquina de la card (pose: rodando)
-//   B4  sin clases hoy             (pose: dormido)
-//   D3  materia sin notas          (pose: reposo)
-//   Widget 4×4, a 44 px en la esquina inferior
-//   Hitos: fin de semestre, primera materia creada, materia salvada del riesgo
-//
-// PANTALLAS DONDE NO APARECE NUNCA
-//   Materia perdida y calculadora imposible: ahí una cara burlona se lee como
-//   burla. Solo tipografía.
+// DÓNDE PUEDE APARECER
+//   Lo decide `mascot.allowedScreens` en el contrato; [MascotHost] lo refleja.
+//   Nunca junto a una mala noticia de verdad: ahí una cara burlona se lee
+//   como burla. Solo tipografía.
 //
 // El parpadeo aleatorio (cada 4–7 s) lo maneja este módulo con su propio Timer.
 // El feature que lo consume no sabe nada de eso.
@@ -37,17 +26,18 @@
 // salvo la fase de la carrera, que es lineal)
 //   reposo / satisfecho    respira 1 → 1,02 desde las patas
 //   rodando                corre: bob, zancada alterna, agujas barridas que
-//                          aletean y sombra que respira. Con `weary` (carga
-//                          larga) se cansa y cada tanto mira hacia atrás
+//                          aletean, la cadena bota y el cristal destella a
+//                          cada zancada. Con `weary` (carga larga) se cansa
+//                          y cada tanto mira hacia atrás
 //   dormido                respiración de sueño 1 → 0,985 y tres «z» que suben
-//   examinando             la mirada barre ±1,2 px, con la lámpara en alto
-//   confundido             la lámpara, caída, se mece ±4° en el suelo
-//   la llama               se mece con la respiración
+//   examinando             la mirada barre ±1,2 px tras el monóculo, que
+//                          destella una vez por barrido
+//   confundido             el monóculo, caído, se mece ±4° colgado de la cadena
 //   entrada (todas)        una vez: escala 0,6 → 1 con easeOutBackBounce
 //
 // TACTO (solo si `interactive`, que es el default)
 //   toque                  salta, abre los ojos, eriza las púas; la sombra se
-//                          encoge y la lámpara sube con él
+//                          encoge y el monóculo salta del ojo
 //   N toques seguidos      se marea: pose confundido (mascot.dizzyTaps en
 //                          mascot.pokeWindowMs, durante mascotDizzy)
 //   mantener pulsado       entrecierra los ojos y se sonroja; no lo admitirá
@@ -55,11 +45,13 @@
 //   Quien lo usa recibe `onTap` / `onLongPress` para decir algo útil.
 //
 // CAMBIOS Y GESTOS (§40)
-//   cambio de pose         cuerpo, cara, púas y lámpara se interpolan
+//   cambio de pose         cuerpo, cara, púas y monóculo se interpolan
 //                          (mascotMorph); lo discreto cambia a mitad
 //   `beat` + `beatKey`     un gesto de una vez: notice, celebrate, hop, sigh,
 //                          stumble. Quien lo pone dice qué pasó; el erizo
 //                          decide cómo se mueve
+//   `antic` + `anticKey`   una ocurrencia de Diógenes (cuenco, lista, reloj
+//                          de arena, gallo, tinaja, sol)
 //
 // Bajo reduced-motion las poses se congelan en su primer fotograma. No se
 // ocultan: la mascota sigue ahí, quieta.
@@ -82,7 +74,6 @@ export '../../theme/tokens.g.dart' show MascotPose;
 enum MascotHost {
   splash('A1 splash'),
   loadError('error de carga'),
-  vase('jarrón de fondo'),
   pdfParsing('A3 procesando PDF'),
   pdfError('A5 error de PDF'),
   urgentCorner('B2 sal ya (esquina)'),
@@ -128,16 +119,16 @@ enum MascotBeat {
       };
 }
 
-/// Ocurrencias de Diógenes: guarda la lámpara, saca algo de su vida, lo usa y
-/// la recupera. Son raras a propósito y cada una tiene su frase.
+/// Ocurrencias de Diógenes: saca algo de su vida, lo usa y lo guarda. El
+/// monóculo no se lo quita. Son raras a propósito y cada una tiene su frase.
 enum MascotAntic {
   /// Tira el cuenco: vio a un niño beber con las manos.
   bowl,
 
-  /// Lee un rollo. Para cuando hay una evaluación cerca.
+  /// Repasa la lista de pendientes, en rollo. Para cuando alguno vence pronto.
   scroll,
 
-  /// Da la vuelta al reloj de arena. Para cuando la clase se acerca.
+  /// Da la vuelta al reloj de arena. Para cuando se acerca la hora de salir.
   hourglass,
 
   /// Alza un gallo desplumado: «¡He aquí el hombre de Platón!».
@@ -600,79 +591,17 @@ class MascotStill extends StatelessWidget {
       );
 }
 
-/// Erizógenes pintado en un ánfora de figuras negras, como las musas de
-/// Hércules: una pintura de vasija que respira y cuya lámpara se mece.
-///
-/// Es fondo, no protagonista: va tenue (`vaseOpacity*`), no se toca y el
-/// lector de pantalla la ignora. Aparece solo donde el contrato lo deja
-/// (`jarrón de fondo`), detrás de un estado vacío o de la bienvenida.
-class MascotVase extends StatefulWidget {
-  const MascotVase({this.pose = MascotPose.reposo, this.width = MascotTokens.sizeVase, super.key});
+/// El ánfora de fondo de la época terracota, retirada: Erizógenes morado no
+/// tiene vasija. Se queda como un hueco vacío solo para que las pantallas que
+/// aún la nombran compilen hasta quitarla; no pinta nada ni ocupa sitio.
+class MascotVase extends StatelessWidget {
+  const MascotVase({this.pose = MascotPose.reposo, this.width, super.key});
 
   final MascotPose pose;
-
-  /// El alto sale de la proporción del ánfora (3:4).
-  final double width;
+  final double? width;
 
   @override
-  State<MascotVase> createState() => _MascotVaseState();
-}
-
-class _MascotVaseState extends State<MascotVase> with SingleTickerProviderStateMixin {
-  late final AnimationController _breathe =
-      AnimationController(vsync: this, duration: MotionDurations.mascotBreathe);
-
-  @override
-  void initState() {
-    super.initState();
-    assert(MascotTokens.allowedScreens.contains(MascotHost.vase.contractName));
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Un loop de fondo: bajo reduced-motion no existe.
-    if (MotionGuard.of(context).allowsLoops) {
-      _breathe.repeat(reverse: true);
-    } else {
-      _breathe
-        ..stop()
-        ..value = 0;
-    }
-  }
-
-  @override
-  void dispose() {
-    _breathe.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return ExcludeSemantics(
-      child: IgnorePointer(
-        child: Opacity(
-          opacity: dark ? MascotTokens.vaseOpacityDark : MascotTokens.vaseOpacityLight,
-          child: RepaintBoundary(
-            child: SizedBox(
-              width: widget.width,
-              height: widget.width * _VasePainter.height / _VasePainter.width,
-              child: AnimatedBuilder(
-                animation: _breathe,
-                builder: (context, _) => CustomPaint(
-                  painter: _VasePainter(
-                    pose: widget.pose,
-                    idle: MotionCurves.easeInOutSine.transform(_breathe.value),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const SizedBox.shrink();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -680,39 +609,67 @@ class _MascotVaseState extends State<MascotVase> with SingleTickerProviderStateM
 //
 // Todas las coordenadas están en un lienzo de 100×100. La geometría es la
 // ilustración (exenta del guardia de literales); lo que se mueve en una
-// reacción sale de MascotTokens. Lienzo de referencia: «v3 · el viejo».
+// reacción sale de MascotTokens. Referencia: Cátedra `b416a89`, dirección B
+// del lienzo «Erizógenes rediseño».
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Lo que asoma entre el bigote y la barba.
-enum _Mouth { calm, puff, sleep, hmm, smile, o }
+/// La boca, un trazo: media sonrisa ladeada, recta, dormida, fruncida,
+/// sonrisa de verdad, ondulada (no entiende) y abierta (jadea).
+enum _Mouth { smirk, flat, sleep, purse, grin, wavy, pant }
 
-/// Dónde lleva la lucerna y cómo está la llama.
-class _Lamp {
-  const _Lamp(this.at, {this.rotation = 0, this.flame = 1, this.lean = 0, this.held = true});
+/// El monóculo: dónde está, cuánto agranda el ojo y cuánto brilla. Todo
+/// continuo para que se interpole entre poses.
+class _Monocle {
+  const _Monocle({
+    this.radius = 10.5,
+    this.magnify = 1,
+    this.slide = 0,
+    this.hang = 0,
+    this.glint = 0.55,
+    this.hold = 0,
+  });
 
-  /// Centro de la lámpara, relativo a (0, cy) del cuerpo.
-  final Offset at;
-  final double rotation;
+  final double radius;
 
-  /// 0 apagada (sale humo), 1 normal, más de 1 alta.
-  final double flame;
+  /// Cuánto agranda el cristal el ojo derecho.
+  final double magnify;
 
-  /// Hacia dónde se tuerce la punta de la llama.
-  final double lean;
+  /// 0 en el ojo, 1 resbalado a la mejilla (dormido).
+  final double slide;
 
-  /// Dormido o confundido la lámpara está en el suelo: nadie la sostiene.
-  final bool held;
+  /// 0 en el ojo, 1 caído y colgando de la cadena (confundido).
+  final double hang;
 
-  static _Lamp lerp(_Lamp a, _Lamp b, double t) => _Lamp(
-        Offset.lerp(a.at, b.at, t)!,
-        rotation: a.rotation + (b.rotation - a.rotation) * t,
-        flame: a.flame + (b.flame - a.flame) * t,
-        lean: a.lean + (b.lean - a.lean) * t,
-        held: t >= 0.5 ? b.held : a.held,
+  /// Brillo del cristal: es lo que antes decía la llama. Vivo en reposo,
+  /// intenso al examinar, apagado dormido o caído.
+  final double glint;
+
+  /// 0 suelto, 1 una pata lo sostiene (examinando).
+  final double hold;
+
+  static _Monocle lerp(_Monocle a, _Monocle b, double t) {
+    double l(double x, double y) => x + (y - x) * t;
+    return _Monocle(
+      radius: l(a.radius, b.radius),
+      magnify: l(a.magnify, b.magnify),
+      slide: l(a.slide, b.slide),
+      hang: l(a.hang, b.hang),
+      glint: l(a.glint, b.glint),
+      hold: l(a.hold, b.hold),
+    );
+  }
+
+  _Monocle copyWith({double? slide, double? glint, double? hold}) => _Monocle(
+        radius: radius,
+        magnify: magnify,
+        slide: slide ?? this.slide,
+        hang: hang,
+        glint: glint ?? this.glint,
+        hold: hold ?? this.hold,
       );
 }
 
-/// Una pose es una cara, una actitud de las púas y una lámpara sobre el mismo
+/// Una pose es una cara, una actitud de las púas y un monóculo sobre el mismo
 /// cuerpo.
 class _PoseSpec {
   const _PoseSpec({
@@ -726,7 +683,7 @@ class _PoseSpec {
     required this.browRight,
     required this.gaze,
     required this.mouth,
-    required this.lamp,
+    this.monocle = const _Monocle(),
     this.sweep = 0,
     this.droop = 0,
     this.bristle = 0,
@@ -750,7 +707,7 @@ class _PoseSpec {
   final Offset browLeft, browRight;
   final Offset gaze;
   final _Mouth mouth;
-  final _Lamp lamp;
+  final _Monocle monocle;
 
   /// Grados que las agujas se barren hacia atrás (carrera).
   final double sweep;
@@ -781,7 +738,7 @@ class _PoseSpec {
       browRight: Offset.lerp(a.browRight, b.browRight, t)!,
       gaze: Offset.lerp(a.gaze, b.gaze, t)!,
       mouth: late ? b.mouth : a.mouth,
-      lamp: _Lamp.lerp(a.lamp, b.lamp, t),
+      monocle: _Monocle.lerp(a.monocle, b.monocle, t),
       sweep: l(a.sweep, b.sweep),
       droop: l(a.droop, b.droop),
       bristle: l(a.bristle, b.bristle),
@@ -801,6 +758,7 @@ class _PoseSpec {
     Offset? browRight,
     Offset? gaze,
     _Mouth? mouth,
+    _Monocle? monocle,
     double? droop,
     double? bristle,
     double? irregular,
@@ -816,7 +774,7 @@ class _PoseSpec {
         browRight: browRight ?? this.browRight,
         gaze: gaze ?? this.gaze,
         mouth: mouth ?? this.mouth,
-        lamp: lamp,
+        monocle: monocle ?? this.monocle,
         sweep: sweep,
         droop: droop ?? this.droop,
         bristle: bristle ?? this.bristle,
@@ -850,21 +808,21 @@ class _PoseSpec {
 }
 
 const Map<MascotPose, _PoseSpec> _poses = {
-  // Escéptico: un ojo a media asta, la lámpara abajo, por si acaso.
+  // Escéptico: un ojo a media asta, el otro agrandado por el monóculo.
   MascotPose.reposo: _PoseSpec(
     cy: 60,
     ryTop: 26,
     ryBottom: 20,
     tilt: 0,
-    lidLeft: 0.46,
-    lidRight: 0.26,
-    browLeft: Offset(1, 8),
-    browRight: Offset(-3, -6),
-    gaze: Offset(0.5, 0.4),
-    mouth: _Mouth.calm,
-    lamp: _Lamp(Offset(70, 13)),
+    lidLeft: 0.42,
+    lidRight: 0.22,
+    browLeft: Offset(0, 6),
+    browRight: Offset(-3, -4),
+    gaze: Offset(0.4, 0.3),
+    mouth: _Mouth.smirk,
     breathes: true,
   ),
+  // Con prisa: el monóculo bien encajado y un destello que va y viene.
   MascotPose.rodando: _PoseSpec(
     cy: 60,
     ryTop: 26,
@@ -872,14 +830,15 @@ const Map<MascotPose, _PoseSpec> _poses = {
     tilt: 9,
     lidLeft: 0.34,
     lidRight: 0.3,
-    browLeft: Offset(2, 12),
-    browRight: Offset(1, -10),
-    gaze: Offset(1.8, 0),
-    mouth: _Mouth.puff,
-    lamp: _Lamp(Offset(74, 3), rotation: -8, lean: -5),
+    browLeft: Offset(1, 10),
+    browRight: Offset(0, -8),
+    gaze: Offset(1.6, 0),
+    mouth: _Mouth.flat,
+    monocle: _Monocle(glint: 0.75),
     sweep: -32,
     runs: true,
   ),
+  // Dormido se le resbala el monóculo a la mejilla y el cristal se apaga.
   MascotPose.dormido: _PoseSpec(
     cy: 65,
     ryTop: 21,
@@ -887,58 +846,59 @@ const Map<MascotPose, _PoseSpec> _poses = {
     tilt: 0,
     lidLeft: 1,
     lidRight: 1,
-    browLeft: Offset(3, 4),
-    browRight: Offset(3, -4),
+    browLeft: Offset(2, 2),
+    browRight: Offset(2, -2),
     gaze: Offset.zero,
     mouth: _Mouth.sleep,
-    lamp: _Lamp(Offset(76, 18), flame: 0, held: false),
+    monocle: _Monocle(radius: 9.5, magnify: 0.9, slide: 1, glint: 0.15),
     droop: 38,
     bristle: -0.2,
   ),
-  // Busca con la lámpara en alto, como quien busca a un hombre honesto.
+  // Examina con el monóculo sujeto con la pata: el ojo, enorme; el cristal,
+  // encendido.
   MascotPose.examinando: _PoseSpec(
     cy: 61,
     ryTop: 26,
     ryBottom: 20,
     tilt: -7,
-    lidLeft: 0.64,
-    lidRight: 0.04,
-    browLeft: Offset(3, 16),
-    browRight: Offset(-7, -12),
-    gaze: Offset(1.3, 1.9),
-    mouth: _Mouth.hmm,
-    lamp: _Lamp(Offset(84, -16), rotation: -6),
+    lidLeft: 0.62,
+    lidRight: 0.05,
+    browLeft: Offset(2, 14),
+    browRight: Offset(-6, -10),
+    gaze: Offset(1.2, 1.8),
+    mouth: _Mouth.purse,
+    monocle: _Monocle(radius: 12, magnify: 1.18, glint: 0.9, hold: 1),
     bristle: 0.08,
   ),
-  // Satisfecho a lo cínico: párpados pesados y una sonrisa bajo el bigote.
+  // Satisfecho a lo cínico: párpados pesados y media sonrisa, no un «¡yay!».
   MascotPose.satisfecho: _PoseSpec(
     cy: 59,
     ryTop: 26,
     ryBottom: 20,
     tilt: -4,
-    lidLeft: 0.52,
-    lidRight: 0.46,
+    lidLeft: 0.5,
+    lidRight: 0.44,
     browLeft: Offset(-3, -4),
     browRight: Offset(-4, -2),
     gaze: Offset(0, 2.4),
-    mouth: _Mouth.smile,
-    lamp: _Lamp(Offset(70, 13), rotation: 4, flame: 0.9, lean: 1),
+    mouth: _Mouth.grin,
+    monocle: _Monocle(glint: 0.7),
     bristle: 0.14,
     breathes: true,
   ),
-  // Se le cae la lámpara y la llama tiembla, casi apagada.
+  // Se le cae el monóculo y cuelga de la cadena, meciéndose.
   MascotPose.confundido: _PoseSpec(
     cy: 60,
     ryTop: 26,
     ryBottom: 20,
     tilt: -11,
     lidLeft: 0,
-    lidRight: 0.04,
-    browLeft: Offset(-7, -14),
-    browRight: Offset(0, 16),
-    gaze: Offset(-1.3, 0.9),
-    mouth: _Mouth.o,
-    lamp: _Lamp(Offset(74, 19), rotation: 34, flame: 0.45, lean: 3, held: false),
+    lidRight: 0.05,
+    browLeft: Offset(-6, -12),
+    browRight: Offset(0, 14),
+    gaze: Offset(-1.2, 0.8),
+    mouth: _Mouth.wavy,
+    monocle: _Monocle(radius: 8, magnify: 0.88, hang: 1, glint: 0),
     bristle: 0.12,
     irregular: 1,
     smallPupils: true,
@@ -951,24 +911,17 @@ const double _sleepDroop = 38;
 /// Semieje horizontal del cuerpo: igual en todas las poses.
 const double _bodyRx = 28;
 
-/// Centros de los ojos en x.
+/// Centros de los ojos en x. El derecho es el del monóculo.
 const double _eyeLeftX = 38.5;
 const double _eyeRightX = 61.5;
 
-/// La ceja: una pieza con el borde de arriba en mechones y la punta de fuera
-/// disparada hacia arriba. Coordenadas locales: 0 es el lado de la nariz.
-const List<Offset> _browShape = [
-  Offset(0, 1.3),
-  Offset(12, 0.9),
-  Offset(16.5, -4.6),
-  Offset(11.2, -1.6),
-  Offset(9.6, -3.9),
-  Offset(7.6, -1.7),
-  Offset(5.6, -3.4),
-  Offset(3.8, -1.5),
-  Offset(2, -2.7),
-  Offset(0, -1.3),
-];
+/// La cadena del monóculo, relativa a (0, cy). Puesto, cae en curva hasta
+/// el vientre, donde va prendida; caído, el monóculo cuelga tirante de un
+/// punto junto al ojo, como en el dibujo original. Largo suelto y tirante.
+const Offset _chainPin = Offset(67, 19);
+const Offset _chainHook = Offset(73, -5);
+const double _chainSlack = 24;
+const double _chainTaut = 17;
 
 double _rad(double deg) => deg * math.pi / 180;
 
@@ -983,119 +936,44 @@ double _seg(double t, double a, double b) => _ease((t - a) / (b - a));
 double _bump(double x) => x <= 0 || x >= 1 ? 0 : math.sin(math.pi * x);
 
 /// Los colores con que se pinta, como pinturas ya hechas: una vez por tema, no
-/// en cada fotograma. `figure` es la figura negra del ánfora: todo silueta y
-/// las líneas «incisas» dejan ver el barro.
+/// en cada fotograma. En oscuro las agujas y los pies se aclaran y aparece la
+/// luz de borde: violeta oscuro sobre casi negro perdía la silueta.
 class _Palette {
-  _Palette({
-    required Color body,
-    required Color bodyShade,
-    required Color bodyLight,
-    required this.ink,
-    required Color spikes,
-    required Color spikeMid,
-    required Color spikeTip,
-    required Color bone,
-    required Color boneShade,
-    required Color eye,
-    required Color pupil,
-    required Color nose,
-    required Color paw,
-    required this.accent,
-    required Color lampClay,
-    required this.lampDark,
-    required Color flame,
-    required Color flameCore,
-    required this.glow,
-    this.cheek,
-    this.shadowAlpha = 0,
-    this.details = true,
-  })  : body = _fill(body),
-        bodyShade = bodyShade,
-        bodyLight = bodyLight,
-        spikes = _fill(spikes),
-        spikeMid = _fill(spikeMid),
-        spikeTip = _fill(spikeTip),
-        bone = _fill(bone),
-        boneShade = _fill(boneShade),
-        eye = _fill(eye),
-        pupil = _fill(pupil),
-        nose = _fill(nose),
-        paw = _fill(paw),
-        lampClay = _fill(lampClay),
-        flame = _fill(flame),
-        flameCore = _fill(flameCore);
+  _Palette({required bool dark})
+      : body = _fill(ColorTokens.mascotBody),
+        bodyShade = ColorTokens.mascotBodyShade,
+        bodyLight = ColorTokens.mascotBodyLight,
+        rim = dark ? ColorTokens.mascotRimLight : null,
+        ink = ColorTokens.mascotInk,
+        brow = ColorTokens.mascotBrow,
+        spikes = _fill(dark ? ColorTokens.mascotSpikesOnDark : ColorTokens.mascotSpikes),
+        spikeMid = _fill(dark ? ColorTokens.mascotSpikeMidOnDark : ColorTokens.mascotSpikeMid),
+        spikeTip = _fill(dark ? ColorTokens.mascotSpikeTipOnDark : ColorTokens.mascotSpikeTip),
+        tubercle = _fill(ColorTokens.mascotTubercle.withValues(alpha: 0.55)),
+        beard = _fill(ColorTokens.mascotTubercle),
+        eye = _fill(ColorTokens.mascotEye),
+        pupil = _fill(ColorTokens.mascotPupil),
+        paw = _fill(dark ? ColorTokens.mascotPawOnDark : ColorTokens.mascotPaw),
+        monocle = ColorTokens.mascotMonocle,
+        monocleShade = ColorTokens.mascotMonocleShade,
+        bone = _fill(ColorTokens.mascotBone),
+        boneShade = _fill(ColorTokens.mascotBoneShade),
+        clay = _fill(ColorTokens.mascotClay),
+        clayDark = ColorTokens.mascotClayDark,
+        sun = _fill(ColorTokens.mascotSun),
+        accent = ColorTokens.mascotAccent,
+        cheek = ColorTokens.mascotCheek,
+        shadowAlpha = dark ? MascotTokens.shadowAlphaDark : MascotTokens.shadowAlphaLight;
 
-  final Paint body,
-      spikes,
-      spikeMid,
-      spikeTip,
-      bone,
-      boneShade,
-      eye,
-      pupil,
-      nose,
-      paw,
-      lampClay,
-      flame,
-      flameCore;
-  final Color bodyShade, bodyLight, ink, accent, lampDark, glow;
-  final Color? cheek;
+  final Paint body, spikes, spikeMid, spikeTip, tubercle, beard, eye, pupil, paw, bone, boneShade, clay, sun;
+  final Color bodyShade, bodyLight, ink, brow, monocle, monocleShade, clayDark, accent, cheek;
 
-  /// 0 = sin sombra (en la vasija el suelo es una línea).
+  /// Luz de borde: solo en oscuro.
+  final Color? rim;
   final double shadowAlpha;
 
-  /// Luces, tubérculos, ojeras y dedos. La figura negra no los lleva.
-  final bool details;
-
-  static _Palette _real({required bool dark}) => _Palette(
-        body: ColorTokens.mascotBody,
-        bodyShade: ColorTokens.mascotBodyShade,
-        bodyLight: ColorTokens.mascotBodyLight,
-        ink: ColorTokens.mascotInk,
-        spikes: dark ? ColorTokens.mascotSpikesOnDark : ColorTokens.mascotSpikes,
-        spikeMid: dark ? ColorTokens.mascotSpikeMidOnDark : ColorTokens.mascotSpikeMid,
-        spikeTip: dark ? ColorTokens.mascotSpikeTipOnDark : ColorTokens.mascotSpikeTip,
-        bone: ColorTokens.mascotBone,
-        boneShade: ColorTokens.mascotBoneShade,
-        eye: ColorTokens.mascotEye,
-        pupil: ColorTokens.mascotPupil,
-        nose: ColorTokens.mascotNose,
-        paw: dark ? ColorTokens.mascotPawOnDark : ColorTokens.mascotPaw,
-        accent: ColorTokens.mascotAccent,
-        lampClay: ColorTokens.mascotLampClay,
-        lampDark: ColorTokens.mascotLampDark,
-        flame: ColorTokens.mascotFlame,
-        flameCore: ColorTokens.mascotFlameCore,
-        glow: ColorTokens.mascotFlameGlow,
-        cheek: ColorTokens.mascotCheek,
-        shadowAlpha: dark ? MascotTokens.shadowAlphaDark : MascotTokens.shadowAlphaLight,
-      );
-
-  static final light = _real(dark: false);
-  static final dark = _real(dark: true);
-
-  static final figure = _Palette(
-    body: ColorTokens.mascotVaseBlack,
-    bodyShade: ColorTokens.mascotVaseBlack,
-    bodyLight: ColorTokens.mascotVaseBlack,
-    ink: ColorTokens.mascotVaseClay,
-    spikes: ColorTokens.mascotVaseBlack,
-    spikeMid: ColorTokens.mascotVaseBlack,
-    spikeTip: ColorTokens.mascotVaseBlack,
-    bone: ColorTokens.mascotVaseClay,
-    boneShade: ColorTokens.mascotVaseBlack,
-    eye: ColorTokens.mascotVaseClay,
-    pupil: ColorTokens.mascotVaseBlack,
-    nose: ColorTokens.mascotVaseBlack,
-    paw: ColorTokens.mascotVaseBlack,
-    accent: ColorTokens.mascotVaseBlack,
-    lampClay: ColorTokens.mascotVaseBlack,
-    lampDark: ColorTokens.mascotVaseClay,
-    flame: ColorTokens.mascotVaseClay,
-    flameCore: ColorTokens.mascotVaseHighlight,
-    glow: ColorTokens.mascotVaseClay,
-    details: false,
-  );
+  static final light = _Palette(dark: false);
+  static final dark = _Palette(dark: true);
 }
 
 /// Lo que dibuja una ocurrencia en un instante: la cara que pone, qué objeto
@@ -1103,7 +981,6 @@ class _Palette {
 class _AnticFrame {
   const _AnticFrame({
     required this.spec,
-    this.lamp = 1,
     this.prop = 0,
     this.propAt = Offset.zero,
     this.propRotation = 0,
@@ -1116,9 +993,6 @@ class _AnticFrame {
   });
 
   final _PoseSpec spec;
-
-  /// 1 la lámpara en la mano, 0 guardada.
-  final double lamp;
 
   /// 1 el objeto fuera, 0 guardado.
   final double prop;
@@ -1133,11 +1007,9 @@ class _AnticFrame {
   /// Dónde sale el sol; null, no sale.
   final Offset? sun;
 
-  /// Guion común: 0–0,14 guarda la lámpara, 0,14–0,24 saca el objeto, lo usa,
-  /// 0,8–0,88 lo guarda y 0,88–1 recupera la lámpara. La cara de cada
-  /// ocurrencia está calcada del lienzo «v3 · el viejo».
+  /// Guion común: 0–0,14 se lo piensa, 0,14–0,24 saca el objeto, lo usa y
+  /// 0,8–0,88 lo guarda. El monóculo no se lo quita nunca: sin él no ve.
   static _AnticFrame at(MascotAntic antic, double t, _PoseSpec base) {
-    final lamp = 1 - _seg(t, 0, 0.14) + _seg(t, 0.88, 1);
     final out = _seg(t, 0.14, 0.24) * (1 - _seg(t, 0.8, 0.88));
     switch (antic) {
       case MascotAntic.bowl:
@@ -1148,31 +1020,30 @@ class _AnticFrame {
         return _AnticFrame(
           spec: base.copyWith(
             gaze: Offset(2.2 * look, 2 * look),
-            lidLeft: after ? 0.55 : 0.46 + 0.2 * look,
-            lidRight: after ? 0.5 : null,
-            browLeft: Offset(1 + 2 * look, 8 + 8 * look),
-            mouth: after ? _Mouth.smile : null,
+            lidLeft: after ? 0.5 : 0.42 + 0.2 * look,
+            lidRight: after ? 0.44 : null,
+            browLeft: Offset(2 * look, 6 + 8 * look),
+            mouth: after ? _Mouth.grin : null,
           ),
-          lamp: lamp,
           prop: t < 0.55 ? out : 1 - _seg(t, 0.72, 0.8),
-          propAt: Offset(72 + 26 * fly, 8 - 40 * _bump(fly * 0.9) - 10 * fly),
+          propAt: Offset(74 + 24 * fly, 12 - 40 * _bump(fly * 0.9) - 14 * fly),
           propRotation: 320 * fly,
           held: t < 0.56,
         );
       case MascotAntic.scroll:
-        // Lo desenrolla con las dos manos y lee de lado a lado.
+        // Desenrolla la lista con las dos patas y la lee de lado a lado.
         final scan = t > 0.36 && t < 0.76 ? math.sin((t - 0.36) / 0.4 * math.pi * 3) : 0.0;
         return _AnticFrame(
           spec: base.copyWith(
             gaze: Offset(1.8 * scan, 2.4),
             lidLeft: 0.5,
-            lidRight: 0.3,
-            mouth: _Mouth.hmm,
+            lidRight: 0.2,
+            mouth: _Mouth.purse,
             browRight: const Offset(-5, -8),
+            monocle: base.monocle.copyWith(glint: 0.9),
           ),
-          lamp: lamp,
           prop: out,
-          propAt: const Offset(64, 10),
+          propAt: const Offset(64, 12),
           propOpen: _seg(t, 0.24, 0.36) * (1 - _seg(t, 0.76, 0.84)),
         );
       case MascotAntic.hourglass:
@@ -1182,13 +1053,12 @@ class _AnticFrame {
         return _AnticFrame(
           spec: base.copyWith(
             gaze: Offset(2 * (1 - stare), 2 * (1 - stare)),
-            browRight: Offset(-3 - 5 * stare, -6),
-            lidLeft: 0.46 - 0.2 * stare,
-            mouth: stare < 0.5 ? _Mouth.hmm : _Mouth.calm,
+            browRight: Offset(-3 - 5 * stare, -4),
+            lidLeft: 0.42 - 0.2 * stare,
+            mouth: stare < 0.5 ? _Mouth.purse : _Mouth.smirk,
           ),
-          lamp: lamp,
           prop: out,
-          propAt: const Offset(72, 6),
+          propAt: const Offset(76, 8),
           propRotation: 180 * flip,
           sand: flip < 1 ? 0.8 : 0.8 - 0.6 * _seg(t, 0.46, 0.8),
         );
@@ -1197,17 +1067,16 @@ class _AnticFrame {
         final lift = _seg(t, 0.28, 0.4) * (1 - _seg(t, 0.74, 0.82));
         return _AnticFrame(
           spec: base.copyWith(
-            mouth: t > 0.4 && t < 0.76 ? _Mouth.smile : _Mouth.calm,
+            mouth: t > 0.4 && t < 0.76 ? _Mouth.grin : _Mouth.smirk,
             lidLeft: 0.3,
-            lidRight: 0.2,
+            lidRight: 0.15,
             browLeft: Offset(-4 * lift, 4),
             browRight: Offset(-6 * lift, -4),
             bristle: 0.25 * lift,
             gaze: Offset(1.5, -1.5 * lift),
           ),
-          lamp: lamp,
           prop: out,
-          propAt: Offset(72, 4 - 14 * lift),
+          propAt: Offset(76, 6 - 14 * lift),
           propRotation: -10 * lift,
           hop: 0.35 * _bump(_seg(t, 0.36, 0.5)),
         );
@@ -1216,26 +1085,24 @@ class _AnticFrame {
         final inside = _seg(t, 0.16, 0.3) * (1 - _seg(t, 0.78, 0.9));
         final peek = t > 0.34 && t < 0.74 ? math.sin((t - 0.34) / 0.4 * 2 * math.pi) : 0.0;
         return _AnticFrame(
-          spec: base.copyWith(gaze: Offset(2.4 * peek, 0), lidLeft: 0.35, lidRight: 0.3, mouth: _Mouth.calm),
-          lamp: lamp,
-          prop: 0,
+          spec: base.copyWith(gaze: Offset(2.4 * peek, 0), lidLeft: 0.35, lidRight: 0.2, mouth: _Mouth.smirk),
           jar: inside > 0.02 ? 48 - 34 * inside : null,
         );
       case MascotAntic.sun:
-        // Se tumba al sol, satisfecho. Que nadie se lo tape.
+        // Se tumba al sol, satisfecho; el monóculo le resbala. Que nadie se
+        // lo tape.
         final lie = _seg(t, 0.16, 0.3) * (1 - _seg(t, 0.8, 0.9));
         return _AnticFrame(
           spec: base.copyWith(
-            lidLeft: 0.46 + 0.54 * lie,
-            lidRight: 0.26 + 0.74 * lie,
-            mouth: lie > 0.5 ? _Mouth.smile : _Mouth.calm,
-            browLeft: Offset(1 - 3 * lie, 8),
-            browRight: Offset(-3 - 2 * lie, -6),
+            lidLeft: 0.42 + 0.58 * lie,
+            lidRight: 0.22 + 0.78 * lie,
+            mouth: lie > 0.5 ? _Mouth.grin : _Mouth.smirk,
+            browLeft: Offset(-3 * lie, 6),
+            browRight: Offset(-3 - 2 * lie, -4),
             droop: 14 * lie,
             tilt: base.tilt - 14 * lie,
+            monocle: base.monocle.copyWith(slide: lie, glint: 0.55 + 0.4 * lie),
           ),
-          lamp: lamp,
-          prop: 0,
           sun: lie > 0.05 ? Offset(14, 12 + 20 * (1 - lie)) : null,
         );
     }
@@ -1253,7 +1120,6 @@ class _ErizogenesPainter extends CustomPainter {
     this.look = Offset.zero,
     this.petted = false,
     this.weary = false,
-    this.figure = false,
     this.from,
     this.morph = 1,
     this.beat,
@@ -1266,11 +1132,12 @@ class _ErizogenesPainter extends CustomPainter {
   final MascotPose pose;
 
   /// Si respira dentro del pintor. `MascotView` lo hace fuera, con una
-  /// transformación sobre la capa ya pintada; la figura del ánfora y la
-  /// imagen quieta de los widgets, aquí.
+  /// transformación sobre la capa ya pintada; la imagen quieta de los
+  /// widgets, aquí.
   final bool breathe;
 
-  /// Tema oscuro: agujas y pies más claros, y otra opacidad de sombra.
+  /// Tema oscuro: agujas y pies más claros, luz de borde y otra opacidad de
+  /// sombra.
   final bool dark;
 
   /// 0..1, ya con su curva. Respiración, sueño o fase de la carrera.
@@ -1294,9 +1161,6 @@ class _ErizogenesPainter extends CustomPainter {
   /// Carga larga: corre cansado y mira atrás.
   final bool weary;
 
-  /// Pintado en el ánfora: figura negra, sin sombra ni luces.
-  final bool figure;
-
   /// Pose de la que viene y cuánto lleva (0..1, ya con curva). Null: quieta.
   final MascotPose? from;
   final double morph;
@@ -1314,7 +1178,7 @@ class _ErizogenesPainter extends CustomPainter {
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
 
-  _Palette get _c => figure ? _Palette.figure : (dark ? _Palette.dark : _Palette.light);
+  _Palette get _c => dark ? _Palette.dark : _Palette.light;
 
   Paint _stroke(Color color, double width) => _line
     ..color = color
@@ -1366,9 +1230,8 @@ class _ErizogenesPainter extends CustomPainter {
           );
 
     // A tamaño pequeño la silueta necesita agujas más gordas y trazos más
-    // gruesos, y pierde luces, tubérculos, ojeras, dedos y asa.
+    // gruesos, y pierde luces, tubérculos y eslabones.
     final small = size.width <= MascotTokens.smallThreshold;
-    final details = c.details && !small;
 
     // La carrera: la fase va lineal y los senos salen de ella. Cansado, la
     // zancada se acorta y cada tanto mira hacia atrás.
@@ -1382,7 +1245,7 @@ class _ErizogenesPainter extends CustomPainter {
     canvas.save();
     canvas.scale(size.width / 100.0);
 
-    if (c.shadowAlpha > 0) _paintShadow(canvas, p, c, hop, step.abs() * (p.runs ? 1 : 0));
+    _paintShadow(canvas, p, c, hop, step.abs() * (p.runs ? 1 : 0));
     final sun = anticFrame?.sun;
     if (sun != null) _paintSun(canvas, c, sun);
 
@@ -1427,19 +1290,13 @@ class _ErizogenesPainter extends CustomPainter {
     final bristle = p.bristle + MascotTokens.hopBristle * hop;
     final flutter = p.runs ? MascotTokens.runSpineFlutter * math.sin(2 * phase) : 0.0;
     _paintSpikes(canvas, p, c, small, bristle, p.sweep + flutter);
-    _paintFeet(canvas, p, c, small, details, stride);
-    _paintBody(canvas, p, c, small, details);
-    _paintFace(canvas, p, c, small, details, hop, lookBack);
+    _paintFeet(canvas, p, c, small, stride);
+    _paintBody(canvas, p, c, small);
+    _paintFace(canvas, p, c, small, hop, lookBack);
+    _paintMonocle(canvas, p, c, small, hop, phase);
     final jar = anticFrame?.jar;
     if (jar != null) _paintJar(canvas, c, Offset(50, p.cy + jar));
-
-    if (anticFrame == null || anticFrame.lamp >= 1) {
-      _paintLamp(canvas, p, c, small, details, hop, phase, 1);
-    } else if (anticFrame.lamp > 0) {
-      _paintLamp(canvas, p, c, small, details, hop, phase, anticFrame.lamp);
-    } else if (anticFrame.prop > 0) {
-      _paintProp(canvas, p, c, antic!, anticFrame, small);
-    }
+    if (anticFrame != null && anticFrame.prop > 0) _paintProp(canvas, p, c, antic!, anticFrame, small);
     if (pose == MascotPose.dormido) _paintZs(canvas, c);
 
     canvas.restore();
@@ -1478,8 +1335,8 @@ class _ErizogenesPainter extends CustomPainter {
   }
 
   /// Agujas de erizo de mar en dos capas y tres tonos: oscura en la raíz,
-  /// media en el tramo y clara en la punta. Nacen dentro del cuerpo (que las
-  /// tapa) y cubren todo menos el vientre. El largo varía con una suma de
+  /// media en el tramo y lila claro en la punta. Nacen dentro del cuerpo (que
+  /// las tapa) y cubren todo menos el vientre. El largo varía con una suma de
   /// senos fija: irregular a la vista, idéntico en cada fotograma.
   void _paintSpikes(Canvas canvas, _PoseSpec p, _Palette c, bool small, double bristle, double sweep) {
     final roots = Path();
@@ -1489,7 +1346,7 @@ class _ErizogenesPainter extends CustomPainter {
     final layers = small
         ? [(MascotTokens.spikesSmall, 1.0, 3.1, 0.0)]
         : [
-            (MascotTokens.spikesNormal, 1.0, 2.4, 0.0),
+            (MascotTokens.spikesNormal, 1.0, 2.3, 0.0),
             (MascotTokens.spikesFront, 0.62, 2.0, 0.5),
           ];
     for (final (n, share, width, offset) in layers) {
@@ -1507,10 +1364,10 @@ class _ErizogenesPainter extends CustomPainter {
         final base = _surface(p, a, 0.86);
         const root = _bodyRx * 0.14;
         _needle(roots, base, angle, length + root, width);
-        final mid = length * 0.38 + root;
-        _needle(mids, base + dir * mid, angle, length * 0.62, width * 0.62);
-        final tip = length * 0.7 + root;
-        _needle(tips, base + dir * tip, angle, length * 0.3, width * 0.3);
+        final mid = length * 0.4 + root;
+        _needle(mids, base + dir * mid, angle, length * 0.6, width * 0.6);
+        final tip = length * 0.66 + root;
+        _needle(tips, base + dir * tip, angle, length * 0.34, width * 0.36);
       }
     }
     canvas.drawPath(roots, c.spikes);
@@ -1518,31 +1375,25 @@ class _ErizogenesPainter extends CustomPainter {
     canvas.drawPath(tips, c.spikeTip);
   }
 
-  /// Pies tubulares con tres dedos. Corriendo se alternan: el que va
-  /// adelante, levantado.
-  void _paintFeet(Canvas canvas, _PoseSpec p, _Palette c, bool small, bool details, double stride) {
+  /// Pies tubulares. Corriendo se alternan: el que va adelante, levantado.
+  void _paintFeet(Canvas canvas, _PoseSpec p, _Palette c, bool small, double stride) {
     final y = p.cy + p.ryBottom + 1.5;
-    final w = small ? 14.0 : 12.4;
-    final h = small ? 9.2 : 7.8;
+    final w = small ? 14.0 : 12.0;
+    final h = small ? 9.2 : 7.6;
     final reach = MascotTokens.runStride * stride;
-    final lift = MascotTokens.runLift;
+    const lift = MascotTokens.runLift;
     for (final foot in [
       Offset(41 - reach, y - math.max(0, stride) * lift),
       Offset(59 + reach, y - math.max(0, -stride) * lift),
     ]) {
       canvas.drawOval(Rect.fromCenter(center: foot, width: w, height: h), c.paw);
-      if (details) {
-        final toe = _stroke(c.ink.withValues(alpha: 0.45), 0.7);
-        for (final dx in const [-2.2, 0.0, 2.2]) {
-          canvas.drawLine(foot.translate(dx, 1.2), foot.translate(dx, 3.2), toe);
-        }
-      }
     }
   }
 
-  /// La cúpula con volumen: luz arriba a la izquierda, sombra abajo a la
-  /// derecha, tubérculos y un contorno de tinta, como la cerámica pintada.
-  void _paintBody(Canvas canvas, _PoseSpec p, _Palette c, bool small, bool details) {
+  /// La cúpula: media elipse alta arriba y otra más baja abajo, con volumen
+  /// (luz arriba a la izquierda, sombra abajo a la derecha), las hileras de
+  /// tubérculos de un erizo de mar y, en oscuro, la luz de borde.
+  void _paintBody(Canvas canvas, _PoseSpec p, _Palette c, bool small) {
     final top = Rect.fromCenter(center: Offset(50, p.cy), width: _bodyRx * 2, height: p.ryTop * 2);
     final bottom = Rect.fromCenter(center: Offset(50, p.cy), width: _bodyRx * 2, height: p.ryBottom * 2);
     final dome = Path()
@@ -1551,48 +1402,52 @@ class _ErizogenesPainter extends CustomPainter {
       ..close();
     canvas.drawPath(dome, c.body);
 
-    if (details) {
-      canvas.save();
-      canvas.clipPath(dome);
+    canvas.save();
+    canvas.clipPath(dome);
+    canvas.drawOval(
+      Rect.fromCenter(center: Offset(60, p.cy + 17), width: 70, height: 42),
+      Paint()..color = c.bodyShade.withValues(alpha: 0.5),
+    );
+    if (!small) {
       canvas.drawOval(
-        Rect.fromCenter(center: Offset(60, p.cy + 16), width: 68, height: 44),
-        Paint()..color = c.bodyShade.withValues(alpha: 0.55),
+        Rect.fromCenter(center: Offset(39, p.cy - 16), width: 34, height: 19),
+        Paint()..color = c.bodyLight.withValues(alpha: 0.5),
       );
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(40, p.cy - 16), width: 34, height: 20),
-        Paint()..color = c.bodyLight.withValues(alpha: 0.55),
-      );
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(37, p.cy - 19), width: 14, height: 7.2),
-        Paint()..color = c.bone.color.withValues(alpha: 0.22),
-      );
-      final dot = Paint()..color = c.bodyShade.withValues(alpha: 0.7);
       for (final phi in const [-0.95, -0.42, 0.1, 0.62]) {
-        for (final th in const [0.3, 0.52, 0.74]) {
+        for (final th in const [0.3, 0.52, 0.74, 0.96]) {
           final y = p.cy - p.ryTop * math.cos(th);
           // Solo en lo alto: la cara no lleva tubérculos.
-          if (y > p.cy - 12) continue;
-          final r = 0.7 + 0.3 * math.sin(th);
+          if (y > p.cy - 11) continue;
+          final r = 0.75 + 0.35 * math.sin(th);
           canvas.drawOval(
             Rect.fromCenter(
               center: Offset(50 + _bodyRx * math.sin(th) * math.sin(phi), y),
               width: 2 * r * (0.6 + 0.4 * math.cos(phi)),
               height: 2 * r,
             ),
-            dot,
+            c.tubercle,
           );
         }
       }
-      canvas.restore();
     }
-    canvas.drawPath(dome, _stroke(c.ink.withValues(alpha: 0.85), small ? 1.8 : 1.3));
+    canvas.restore();
+
+    final rim = c.rim;
+    if (rim != null) {
+      canvas.drawArc(top.deflate(1.2), _rad(-165), _rad(60), false, _stroke(rim, small ? 2.6 : 2));
+    }
+    canvas.drawPath(dome, _stroke(c.ink.withValues(alpha: 0.7), small ? 1.6 : 1.1));
   }
 
-  void _paintFace(
-      Canvas canvas, _PoseSpec p, _Palette c, bool small, bool details, double hop, double lookBack) {
+  void _paintFace(Canvas canvas, _PoseSpec p, _Palette c, bool small, double hop, double lookBack) {
     final ey = p.cy - 2;
-    final er = small ? 8.6 : 7.8;
-    final pupilR = (small ? 3.6 : 3.2) * (p.smallPupils ? 0.7 : 1);
+    final er = small ? 8.2 : 7.4;
+    final pupilR = (small ? 3.4 : 2.8) * (p.smallPupils ? 0.72 : 1);
+    // El cristal agranda el ojo mientras está puesto; caído, ya no.
+    final m = p.monocle;
+    final onEye = 1 - m.hang;
+    final mag = 1 + (m.magnify - 1) * onEye;
+    final glass = 1 + 0.08 * onEye * (1 - m.slide);
 
     // Examinando: la mirada barre de lado a lado, como quien lee una fila.
     final glance =
@@ -1607,33 +1462,39 @@ class _ErizogenesPainter extends CustomPainter {
       return l + (1 - l) * blink;
     }
 
-    // Mejillas: un rubor quieto que se enciende cuando lo acarician.
-    final cheek = c.cheek;
-    if (cheek != null) {
-      final blush = Paint()
-        ..color =
-            cheek.withValues(alpha: petted ? MascotTokens.blushAlpha * 2 : MascotTokens.blushAlpha * 0.8);
-      for (final cx in const [29.5, 70.5]) {
-        canvas.drawOval(Rect.fromCenter(center: Offset(cx, p.cy + 5.5), width: 10, height: 5.6), blush);
+    _paintEye(canvas, c, Offset(_eyeLeftX, ey), er * 0.95, er * 1.02, lid(p.lidLeft), gaze, pupilR, small);
+    _paintEye(
+      canvas,
+      c,
+      Offset(_eyeRightX, ey - 0.5),
+      er * mag * glass,
+      er * 1.05 * mag * glass,
+      lid(p.lidRight),
+      gaze * mag,
+      pupilR * mag * (1 + 0.15 * onEye),
+      small,
+    );
+
+    final browWidth = small ? 3.6 : 3.0;
+    _paintBrow(canvas, c, Offset(_eyeLeftX, ey - er - 2.2), p.browLeft, browWidth);
+    _paintBrow(canvas, c, Offset(_eyeRightX, ey - er * mag - 3.6), p.browRight, browWidth);
+
+    // Rubor solo cuando lo acarician. No lo admitirá.
+    if (petted) {
+      final blush = Paint()..color = c.cheek.withValues(alpha: MascotTokens.blushAlpha * 1.6);
+      for (final cx in const [30.0, 70.0]) {
+        canvas.drawOval(Rect.fromCenter(center: Offset(cx, p.cy + 8), width: 9, height: 4.5), blush);
       }
     }
 
-    _paintEye(
-        canvas, c, Offset(_eyeLeftX, ey), er * 0.95, er * 1.02, lid(p.lidLeft), gaze, pupilR, small, details);
-    _paintEye(canvas, c, Offset(_eyeRightX, ey - 0.5), er, er * 1.05, lid(p.lidRight), gaze, pupilR, small,
-        details);
-
-    _paintBrow(canvas, c, Offset(_eyeLeftX, ey - er - 2.6), p.browLeft, small, outward: false);
-    _paintBrow(canvas, c, Offset(_eyeRightX, ey - er - 3.4), p.browRight, small, outward: true);
-
-    final mouth = weary && p.runs ? _Mouth.o : p.mouth;
-    _paintBeard(canvas, p, c, small, details, mouth);
-    _paintMustache(canvas, p, c, small, mouth);
+    final mouth = weary && p.runs ? _Mouth.pant : p.mouth;
+    _paintMouth(canvas, p, c, small, mouth);
+    _paintBeard(canvas, p, c, small);
   }
 
-  /// Un ojo con su párpado: el blanco, la pupila con dos brillos, un párpado
-  /// del color del cuerpo recortado a la forma del ojo, el contorno y la
-  /// ojera. Cerrado del todo es una curva cansada con pestañas.
+  /// Un ojo con su párpado: el blanco, la pupila con su brillo y encima un
+  /// párpado del color del cuerpo recortado a la forma del ojo. Cerrado del
+  /// todo es una curva cansada hacia abajo.
   void _paintEye(
     Canvas canvas,
     _Palette c,
@@ -1644,24 +1505,14 @@ class _ErizogenesPainter extends CustomPainter {
     Offset gaze,
     double pupilR,
     bool small,
-    bool details,
   ) {
     if (lid >= 0.99) {
-      final closed = _stroke(c.ink, small ? 2.4 : 1.9);
       canvas.drawPath(
         Path()
-          ..moveTo(o.dx - rx, o.dy + 1)
-          ..quadraticBezierTo(o.dx, o.dy + ry * 0.75, o.dx + rx, o.dy + 1),
-        closed,
+          ..moveTo(o.dx - rx, o.dy)
+          ..quadraticBezierTo(o.dx, o.dy + ry * 0.7, o.dx + rx, o.dy),
+        _stroke(c.brow, small ? 2.6 : 2.0),
       );
-      if (details) {
-        final lash = _stroke(c.ink, 1);
-        for (final t in const [0.25, 0.5, 0.75]) {
-          final x = o.dx - rx + 2 * rx * t;
-          final y = o.dy + 1 + (ry * 0.75 - 1) * 2 * t * (1 - t);
-          canvas.drawLine(Offset(x, y + 1), Offset(x + (t - 0.5) * 2, y + 3), lash);
-        }
-      }
       return;
     }
     final oval = Rect.fromCenter(center: o, width: rx * 2, height: ry * 2);
@@ -1670,8 +1521,7 @@ class _ErizogenesPainter extends CustomPainter {
     canvas.clipPath(Path()..addOval(oval));
     final pupil = o + gaze;
     canvas.drawCircle(pupil, pupilR, c.pupil);
-    canvas.drawCircle(pupil.translate(-pupilR * 0.38, -pupilR * 0.42), pupilR * 0.32, c.eye);
-    canvas.drawCircle(pupil.translate(pupilR * 0.42, pupilR * 0.38), pupilR * 0.14, c.eye);
+    canvas.drawCircle(pupil.translate(-pupilR * 0.35, -pupilR * 0.4), pupilR * 0.3, c.eye);
     final top = o.dy - ry;
     final ly = top + lid * 2 * ry;
     if (lid > 0) {
@@ -1680,258 +1530,211 @@ class _ErizogenesPainter extends CustomPainter {
           ..moveTo(o.dx - rx - 1, top - 1)
           ..lineTo(o.dx + rx + 1, top - 1)
           ..lineTo(o.dx + rx + 1, ly)
-          ..quadraticBezierTo(o.dx, ly + ry * 0.2, o.dx - rx - 1, ly)
+          ..quadraticBezierTo(o.dx, ly + ry * 0.18, o.dx - rx - 1, ly)
           ..close(),
         c.body,
       );
     }
     canvas.restore();
-    canvas.drawOval(oval, _stroke(c.ink.withValues(alpha: 0.6), 0.9));
+    canvas.drawOval(oval, _stroke(c.ink.withValues(alpha: 0.45), 0.8));
     if (lid > 0) {
       canvas.drawPath(
         Path()
           ..moveTo(o.dx - rx * 0.98, ly)
-          ..quadraticBezierTo(o.dx, ly + ry * 0.2, o.dx + rx * 0.98, ly),
-        _stroke(c.ink, 1.5),
-      );
-    }
-    // La ojera de quien piensa demasiado.
-    if (details) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(o.dx - rx * 0.6, o.dy + ry + 1.4)
-          ..quadraticBezierTo(o.dx, o.dy + ry + 2.8, o.dx + rx * 0.6, o.dy + ry + 1.4),
-        _stroke(c.bodyShade, 1),
+          ..quadraticBezierTo(o.dx, ly + ry * 0.18, o.dx + rx * 0.98, ly),
+        _stroke(c.brow, small ? 2 : 1.5),
       );
     }
   }
 
-  /// Ceja poblada de viejo. [shape]: dx cuánto baja, dy su inclinación en
-  /// grados. [outward] dice hacia qué lado queda la punta que se dispara.
-  void _paintBrow(Canvas canvas, _Palette c, Offset eye, Offset shape, bool small, {required bool outward}) {
-    final k = small ? 1.15 : 0.92;
-    final path = Path()..addPolygon(_browShape, true);
-    canvas.save();
-    canvas.translate(eye.dx + (outward ? -5.5 : 5.5), eye.dy + shape.dx + 1);
-    canvas.rotate(_rad(outward ? shape.dy : -shape.dy));
-    canvas.scale(outward ? k : -k, k);
-    canvas.save();
-    canvas.translate(0.6, 1.1);
-    canvas.drawPath(path, c.boneShade);
-    canvas.restore();
-    canvas.drawPath(path, c.bone);
-    canvas.restore();
-  }
-
-  /// La barba del filósofo: tres puntas de hueso con sus hebras, y la boca
-  /// que asoma entre ella y el bigote. Dormido se le tuerce un poco.
-  void _paintBeard(Canvas canvas, _PoseSpec p, _Palette c, bool small, bool details, _Mouth mouth) {
-    final cy = p.cy;
-    final droop = 0.5 * math.min(1, p.droop / _sleepDroop);
-    final beard = Path()
-      ..moveTo(40, cy + 6.5)
-      ..quadraticBezierTo(38.2, cy + 17, 43.5, cy + 25)
-      ..lineTo(46.6, cy + 21.5)
-      ..lineTo(50 + droop * 0.8, cy + 29 - droop * 3)
-      ..lineTo(53.4, cy + 21.5)
-      ..lineTo(56.5, cy + 25)
-      ..quadraticBezierTo(61.8, cy + 17, 60, cy + 6.5)
-      ..close();
-    canvas.drawPath(beard.shift(const Offset(0.8, 1)), c.boneShade);
-    canvas.drawPath(beard, c.bone);
-    if (details) {
-      final strand = _stroke(c.boneShade.color, 0.9);
-      for (final (x0, x1) in const [(45.0, 44.5), (50.0, 50.0), (55.0, 55.5)]) {
-        canvas.drawPath(
-          Path()
-            ..moveTo(x0, cy + 14)
-            ..quadraticBezierTo((x0 + x1) / 2 + 0.8, cy + 19, x1, cy + 22),
-          strand,
-        );
-      }
-    }
-
-    final my = cy + 11.4;
-    final ink = Paint()..color = c.ink;
-    switch (mouth) {
-      case _Mouth.o:
-        canvas.drawOval(Rect.fromCenter(center: Offset(50, my + 0.6), width: 3.8, height: 4.6), ink);
-      case _Mouth.smile:
-        canvas.drawPath(
-          Path()
-            ..moveTo(45.5, my - 0.6)
-            ..quadraticBezierTo(50, my + 3.2, 54.5, my - 0.6)
-            ..close(),
-          ink,
-        );
-      case _Mouth.puff:
-        canvas.drawOval(Rect.fromCenter(center: Offset(50, my), width: 5.2, height: 2.8), ink);
-      case _Mouth.hmm:
-        canvas.drawLine(Offset(47.5, my), Offset(52.5, my - 0.6), _stroke(c.ink, 1.4));
-      case _Mouth.sleep:
-        canvas.drawPath(
-          Path()
-            ..moveTo(48.5, my)
-            ..quadraticBezierTo(50, my + 1, 51.5, my),
-          _stroke(c.ink, 1.2),
-        );
-      case _Mouth.calm:
-        canvas.drawPath(
-          Path()
-            ..moveTo(47, my)
-            ..quadraticBezierTo(50, my + 1.2, 53, my - 0.4),
-          _stroke(c.ink, 1.4),
-        );
-    }
-  }
-
-  /// Bigote de dos alas que sube con la sonrisa y cae al dormir, y la nariz.
-  void _paintMustache(Canvas canvas, _PoseSpec p, _Palette c, bool small, _Mouth mouth) {
-    final y = p.cy + 7.6;
-    final lift = switch (mouth) {
-      _Mouth.smile => -2.2,
-      _Mouth.o => -1.2,
-      _Mouth.hmm => 0.4,
-      _Mouth.sleep => 1.4,
-      _Mouth.puff => -0.6,
-      _Mouth.calm => 0.0,
-    };
-    final outline = _stroke(c.ink.withValues(alpha: 0.45), 0.6);
-    for (final side in const [-1.0, 1.0]) {
-      final wing = Path()
-        ..moveTo(50, y - 1)
-        ..quadraticBezierTo(50 + side * 6, y - 2.6, 50 + side * 11.5, y + 2.2 + lift)
-        ..quadraticBezierTo(50 + side * 6.5, y + 3.4, 50, y + 2)
-        ..close();
-      canvas.drawPath(wing.shift(const Offset(0, 0.7)), c.boneShade);
-      canvas.drawPath(wing, c.bone);
-      canvas.drawPath(wing, outline);
-    }
-    canvas.drawOval(
-      Rect.fromCenter(center: Offset(50, p.cy + 5.2), width: small ? 7.2 : 6.2, height: small ? 5.6 : 4.8),
-      c.nose,
-    );
-    if (c.details) {
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset(49, p.cy + 4.4), width: 2, height: 1.4),
-        Paint()..color = c.bodyLight.withValues(alpha: 0.8),
-      );
-    }
-  }
-
-  /// La lucerna griega de barro: cuerpo, pico, asa, llama y su halo. Se dibuja
-  /// en su sitio sin escalar y luego se escala desde su centro. [stow] 1 en la
-  /// mano; menos de 1, entrando o saliendo de la alforja.
-  void _paintLamp(
-    Canvas canvas,
-    _PoseSpec p,
-    _Palette c,
-    bool small,
-    bool details,
-    double hop,
-    double phase,
-    double stow,
-  ) {
-    final lamp = p.lamp;
-    final k = (small ? 1.6 : 1.35) * stow;
-    if (k <= 0.01) return;
-    final o = Offset(
-      lamp.at.dx - 8 * (1 - stow),
-      p.cy + lamp.at.dy + 8 * (1 - stow) - MascotTokens.hopLampLift * hop * (lamp.held ? 1 : 0),
-    );
-    var rotation = lamp.rotation;
-    // Caída en el suelo, se mece con el bamboleo del desconcierto.
-    if (pose == MascotPose.confundido && antic == null)
-      rotation += MascotTokens.wobbleDegrees * (2 * aux - 1);
-    // La llama se mece con la respiración; corriendo, aletea hacia atrás.
-    final sway =
-        p.runs ? MascotTokens.flameSway * math.sin(2 * phase) : MascotTokens.flameSway * (2 * idle - 1);
-    final lean = lamp.lean + sway;
-    final flame = lamp.flame * stow;
-
-    canvas.save();
-    canvas.translate(o.dx, o.dy);
-    canvas.rotate(_rad(rotation));
-    canvas.scale(k);
-
-    const f = Offset(11.2, -1.8); // boca del pico, donde nace la llama
-    if (flame > 0) {
-      final r = 13 * flame;
-      final center = f.translate(0, -3);
-      canvas.drawCircle(
-        center,
-        r,
-        Paint()
-          ..shader = RadialGradient(
-            colors: [c.glow.withValues(alpha: 0.55), c.glow.withValues(alpha: 0)],
-          ).createShader(Rect.fromCircle(center: center, radius: r)),
-      );
-    }
-    if (details) {
-      canvas.drawCircle(const Offset(-8.2, -0.6), 2.5, _stroke(c.lampDark, 1.4));
-    }
-    final spout = Path()
-      ..moveTo(4, -2.6)
-      ..quadraticBezierTo(9, -2.8, 11.6, -1.9)
-      ..quadraticBezierTo(12.8, -0.4, 11.2, 0.9)
-      ..quadraticBezierTo(8, 2.2, 4, 2.6)
-      ..close();
-    final edge = _stroke(c.ink, 0.6);
-    canvas.drawPath(spout, c.lampClay);
-    canvas.drawPath(spout, edge);
-    final bowl = Rect.fromCenter(center: Offset.zero, width: 15.2, height: 7.8);
-    canvas.drawOval(bowl, c.lampClay);
-    canvas.drawOval(bowl, edge);
-    if (details) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(-6, -1.2)
-          ..quadraticBezierTo(0, -3.2, 6, -1.2),
-        _stroke(c.bodyLight.withValues(alpha: 0.7), 0.8),
-      );
-    }
+  /// [shape]: dx cuánto baja la ceja, dy su inclinación en grados.
+  void _paintBrow(Canvas canvas, _Palette c, Offset o, Offset shape, double width) {
+    const half = 6.2;
+    final a = _rad(shape.dy);
+    final y = o.dy + shape.dx;
     canvas.drawPath(
       Path()
-        ..moveTo(-7, 1.2)
-        ..quadraticBezierTo(0, 3.6, 7, 1.2),
-      _stroke(c.lampDark, 1.1),
+        ..moveTo(o.dx - half * math.cos(a), y - half * math.sin(a))
+        ..quadraticBezierTo(o.dx, y - 1.4, o.dx + half * math.cos(a), y + half * math.sin(a)),
+      _stroke(c.brow, width),
     );
-    canvas.drawOval(Rect.fromCenter(center: const Offset(-0.8, -2.6), width: 5.6, height: 2.4),
-        Paint()..color = c.lampDark);
+  }
 
-    if (flame > 0) {
-      final h = 8 * flame;
-      canvas.drawPath(
-        Path()
-          ..moveTo(f.dx - 2, f.dy)
-          ..quadraticBezierTo(f.dx - 2.6, f.dy - h / 2, f.dx + lean, f.dy - h)
-          ..quadraticBezierTo(f.dx + 2.6, f.dy - h / 2, f.dx + 2, f.dy)
-          ..quadraticBezierTo(f.dx, f.dy + 1.6, f.dx - 2, f.dy)
-          ..close(),
-        c.flame,
+  void _paintMouth(Canvas canvas, _PoseSpec p, _Palette c, bool small, _Mouth mouth) {
+    final y = p.cy + 11;
+    if (mouth == _Mouth.pant) {
+      canvas.drawOval(Rect.fromCenter(center: Offset(50, y + 0.4), width: 4, height: 3.6), Paint()..color = c.brow);
+      return;
+    }
+    final path = switch (mouth) {
+      _Mouth.smirk => Path()
+        ..moveTo(44, y)
+        ..quadraticBezierTo(49, y + 2, 56, y - 2.2),
+      _Mouth.flat => Path()
+        ..moveTo(45, y)
+        ..lineTo(55, y + 0.6),
+      _Mouth.sleep => Path()
+        ..moveTo(48, y)
+        ..quadraticBezierTo(50, y + 1.2, 52, y),
+      _Mouth.purse => Path()
+        ..moveTo(48.5, y)
+        ..quadraticBezierTo(50, y - 1, 51.5, y),
+      _Mouth.grin => Path()
+        ..moveTo(44, y - 1)
+        ..quadraticBezierTo(50, y + 3.2, 56, y - 2.4),
+      _Mouth.wavy || _Mouth.pant => Path()
+        ..moveTo(44.5, y)
+        ..quadraticBezierTo(46.8, y - 1.8, 49, y)
+        ..quadraticBezierTo(51.2, y + 1.8, 53.5, y),
+    };
+    canvas.drawPath(path, _stroke(c.brow, small ? 2.4 : 2.0));
+  }
+
+  /// La barba del filósofo: tres púas que cuelgan de la barbilla. Dormido se
+  /// le tuercen hacia los lados.
+  void _paintBeard(Canvas canvas, _PoseSpec p, _Palette c, bool small) {
+    final y = p.cy + 13.5;
+    final droop = 0.5 * math.min(1, p.droop / _sleepDroop);
+    final shafts = Path();
+    final tips = Path();
+    for (final (x, length, deg) in const [(46.6, 8.0, 20.0), (50.0, 11.0, 0.0), (53.4, 8.0, -20.0)]) {
+      final angle = _rad(90 + deg * (1 - droop));
+      final l = length * (1 - droop * 0.25);
+      _needle(shafts, Offset(x, y), angle, l, small ? 2.4 : 1.6);
+      _needle(
+        tips,
+        Offset(x + math.cos(angle) * l * 0.6, y + math.sin(angle) * l * 0.6),
+        angle,
+        l * 0.4,
+        small ? 0.9 : 0.8,
       );
-      canvas.drawPath(
-        Path()
-          ..moveTo(f.dx - 0.9, f.dy)
-          ..quadraticBezierTo(f.dx - 1.1, f.dy - h * 0.3, f.dx + lean / 2, f.dy - h * 0.58)
-          ..quadraticBezierTo(f.dx + 1.1, f.dy - h * 0.3, f.dx + 0.9, f.dy)
-          ..close(),
-        c.flameCore,
+    }
+    // Entrecana: del tono de los tubérculos, para que se lea sobre la sombra
+    // del vientre sin parecer dientes.
+    canvas.drawPath(shafts, c.beard);
+    canvas.drawPath(shafts, _stroke(c.ink.withValues(alpha: 0.55), 0.5));
+    canvas.drawPath(tips, c.spikeTip);
+  }
+
+  /// El monóculo de latón con su cadena. En el ojo, la cadena cae en curva
+  /// hasta el costado; resbalado, en la mejilla; caído, cuelga tirante del
+  /// enganche y se mece. El brillo del cristal es el estado de ánimo.
+  void _paintMonocle(Canvas canvas, _PoseSpec p, _Palette c, bool small, double hop, double phase) {
+    final m = p.monocle;
+    final anchor = Offset.lerp(_chainPin, _chainHook, m.hang)!.translate(0, p.cy);
+    final eye = Offset(_eyeRightX, p.cy - 2.5);
+    final onEye = eye.translate(0, 5 * m.slide - MascotTokens.hopMonocleLift * hop * (1 - m.hang));
+    // Caído: un péndulo bajo el enganche, que se mece con el bamboleo.
+    final swing = pose == MascotPose.confundido && antic == null ? MascotTokens.wobbleDegrees * (2 * aux - 1) : 0.0;
+    final down = _rad(76 - 1.6 * swing);
+    final dir = Offset(math.cos(down), math.sin(down));
+    final r = m.radius;
+    final hanging = anchor + dir * (_chainTaut + r);
+    // Entre el ojo y la cadena tirante cae en arco, hacia fuera.
+    final center = Offset.lerp(onEye, hanging, m.hang)! + Offset(5 * _bump(m.hang), 0);
+    final rotation = 12 * m.slide + (26 + swing * 2) * m.hang;
+
+    // La pata que lo sostiene al examinar.
+    if (m.hold > 0.02) {
+      canvas.save();
+      canvas.translate(center.dx + r * 0.62, center.dy + r * 0.86);
+      canvas.rotate(_rad(-28));
+      canvas.scale(m.hold);
+      canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 12, height: 9), c.paw);
+      canvas.drawOval(
+        Rect.fromCenter(center: Offset.zero, width: 12, height: 9),
+        _stroke(c.ink.withValues(alpha: 0.5), 0.8),
       );
-    } else if (c.details && stow >= 1) {
-      // Apagada: un hilo de humo que sube.
+      canvas.restore();
+    }
+
+    // El enganche de la cadena en el aro: abajo a la derecha puesto, hacia
+    // el enganche caído.
+    final lugOn = _rad(52 + 12 * m.slide);
+    final toAnchor = anchor - center;
+    final lugHang = math.atan2(toAnchor.dy, toAnchor.dx);
+    final lugAngle = lugOn + _angleDelta(lugOn, lugHang) * m.hang;
+    final lug = center + Offset(math.cos(lugAngle), math.sin(lugAngle)) * r;
+
+    // La cadena: una parábola con el largo que le queda, combada hacia fuera
+    // y hacia abajo. Corriendo, bota con la zancada.
+    final length = _chainSlack + (_chainTaut - _chainSlack) * m.hang;
+    final span = anchor - lug;
+    final chord = span.distance;
+    final sag = chord >= length || chord == 0 ? 0.0 : math.sqrt(3 * chord * (length - chord) / 8);
+    var normal = chord == 0 ? Offset.zero : Offset(-span.dy, span.dx) / chord;
+    if (normal.dx + normal.dy < 0) normal = -normal;
+    final bounce = p.runs ? 2.5 * math.sin(phase).abs() : 0.0;
+    final control = Offset.lerp(lug, anchor, 0.5)! + normal * (2 * sag - bounce);
+    final chain = c.monocle;
+    if (small) {
       canvas.drawPath(
         Path()
-          ..moveTo(f.dx, f.dy - 1)
-          ..relativeQuadraticBezierTo(-2.5, -3, 0, -6)
-          ..relativeQuadraticBezierTo(2.5, -3, 0, -6),
-        _stroke(c.bone.color.withValues(alpha: 0.5), 1.2),
+          ..moveTo(lug.dx, lug.dy)
+          ..quadraticBezierTo(control.dx, control.dy, anchor.dx, anchor.dy),
+        _stroke(chain, 1.8),
+      );
+    } else {
+      final link = _fill(chain);
+      final links = (length / 2).round();
+      for (var i = 0; i <= links; i++) {
+        final t = i / links;
+        final u = 1 - t;
+        canvas.drawCircle(lug * (u * u) + control * (2 * u * t) + anchor * (t * t), 0.72, link);
+      }
+      canvas.drawCircle(anchor, 1.3, link);
+    }
+
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(_rad(rotation));
+    // El cristal: un velo apenas, con un reflejo que dice cómo está.
+    canvas.drawCircle(Offset.zero, r, _fill(ColorTokens.mascotEye.withValues(alpha: 0.12 + 0.06 * m.hang)));
+    final glint = m.glint;
+    if (glint > 0.02) {
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset.zero, radius: r * 0.7),
+        _rad(-155),
+        _rad(50),
+        false,
+        _stroke(ColorTokens.mascotEye.withValues(alpha: 0.65 * glint), small ? 1.8 : 1.3),
+      );
+    }
+    // Examinando: un destello más fuerte, una vez por barrido de la mirada.
+    // Corriendo, uno por zancada.
+    final flash = switch (pose) {
+      MascotPose.examinando when antic == null => (1 - (aux - 0.85).abs() / 0.15).clamp(0.0, 1.0),
+      MascotPose.rodando => math.max(0.0, math.sin(phase) - 0.6) / 0.4,
+      _ => 0.0,
+    };
+    if (flash > 0 && !small) {
+      canvas.drawCircle(
+        Offset(-r * 0.36, -r * 0.44),
+        1.4 * flash,
+        _fill(ColorTokens.mascotEye.withValues(alpha: 0.9 * flash)),
+      );
+    }
+    // El aro de latón, con su sombra por dentro.
+    canvas.drawCircle(Offset.zero, r, _stroke(c.monocle, small ? 3.2 : 2.2));
+    if (!small) {
+      canvas.drawArc(
+        Rect.fromCircle(center: Offset.zero, radius: r - 1.1),
+        _rad(20),
+        _rad(140),
+        false,
+        _stroke(c.monocleShade, 0.7),
       );
     }
     canvas.restore();
+    canvas.drawCircle(lug, small ? 1.6 : 1.2, _fill(c.monocle));
+  }
 
-    // El pie tubular que la sostiene, por debajo.
-    if (lamp.held) _paintHand(canvas, c, o.translate(-1.5 * k, 4.3 * k), k);
+  /// La diferencia más corta entre dos ángulos, para que el enganche gire por
+  /// el lado corto.
+  static double _angleDelta(double from, double to) {
+    var d = (to - from) % (2 * math.pi);
+    if (d > math.pi) d -= 2 * math.pi;
+    return d;
   }
 
   void _paintHand(Canvas canvas, _Palette c, Offset at, double k) {
@@ -1956,16 +1759,13 @@ class _ErizogenesPainter extends CustomPainter {
           ..quadraticBezierTo(-6.5, 6, 0, 6.5)
           ..quadraticBezierTo(6.5, 6, 7, -1)
           ..close();
-        canvas.drawPath(body, c.lampClay);
+        canvas.drawPath(body, c.clay);
         canvas.drawPath(body, edge);
         final rim = Rect.fromCenter(center: const Offset(0, -1), width: 14, height: 3.6);
-        canvas.drawOval(rim, Paint()..color = c.lampDark);
+        canvas.drawOval(rim, _fill(c.clayDark));
         canvas.drawOval(rim, edge);
-        final band = _stroke(c.ink, 0.8);
-        for (final x in const [-5.0, -1.0, 3.0]) {
-          canvas.drawLine(Offset(x, 2), Offset(x + 2, 2), band);
-        }
       case MascotAntic.scroll:
+        // La lista de pendientes, en rollo: lo que hay que hacer, en pequeño.
         canvas.translate(at.dx - 14, at.dy - 2);
         canvas.scale(1.2 * k);
         final w = 4 + 14 * f.propOpen;
@@ -1984,7 +1784,7 @@ class _ErizogenesPainter extends CustomPainter {
             Rect.fromLTWH(side * w / 2 - 1.8, -8.2, 3.6, 15.4),
             const Radius.circular(1.8),
           );
-          canvas.drawRRect(roller, c.lampClay);
+          canvas.drawRRect(roller, c.clay);
           canvas.drawRRect(roller, edge);
         }
       case MascotAntic.hourglass:
@@ -1999,7 +1799,7 @@ class _ErizogenesPainter extends CustomPainter {
           ..lineTo(-4.5, 7)
           ..lineTo(-0.8, 0)
           ..close();
-        canvas.drawPath(glass, Paint()..color = c.bone.color.withValues(alpha: 0.55));
+        canvas.drawPath(glass, _fill(c.bone.color.withValues(alpha: 0.55)));
         canvas.drawPath(glass, edge);
         final top = 7 * (1 - f.sand) * 0.8;
         final spread = 4.5 * (1 - f.sand) * 0.8;
@@ -2009,7 +1809,7 @@ class _ErizogenesPainter extends CustomPainter {
             ..lineTo(spread, -top)
             ..lineTo(0, -0.5)
             ..close(),
-          c.flame,
+          c.sun,
         );
         canvas.drawPath(
           Path()
@@ -2018,11 +1818,11 @@ class _ErizogenesPainter extends CustomPainter {
             ..lineTo(3.2 * f.sand, 6.5 - 5 * f.sand)
             ..lineTo(-3.2 * f.sand, 6.5 - 5 * f.sand)
             ..close(),
-          c.flame,
+          c.sun,
         );
         for (final y in const [-7.8, 7.8]) {
           final cap = RRect.fromRectAndRadius(Rect.fromLTWH(-5.6, y - 1, 11.2, 2), const Radius.circular(1));
-          canvas.drawRRect(cap, c.lampClay);
+          canvas.drawRRect(cap, _fill(c.monocle));
           canvas.drawRRect(cap, _stroke(c.ink, 0.5));
         }
       case MascotAntic.chicken:
@@ -2044,10 +1844,10 @@ class _ErizogenesPainter extends CustomPainter {
   }
 
   void _paintChicken(Canvas canvas, _Palette c) {
-    final skin = Paint()..color = ColorTokens.mascotChicken;
+    final skin = _fill(ColorTokens.mascotChicken);
     final fold = _stroke(ColorTokens.mascotChickenShade, 0.8);
     final edge = _stroke(c.ink, 0.6);
-    final leg = _stroke(ColorTokens.mascotFlame, 1);
+    final leg = _stroke(ColorTokens.mascotSun, 1);
     for (final sx in const [-1.6, 1.6]) {
       canvas.drawLine(Offset(sx, 4), Offset(sx * 1.4, 10), leg);
       canvas.drawLine(Offset(sx * 1.4 - 1.2, 10), Offset(sx * 1.4 + 1.2, 10), leg);
@@ -2061,7 +1861,7 @@ class _ErizogenesPainter extends CustomPainter {
         ..quadraticBezierTo(0, 3.5, 3, 1),
       fold,
     );
-    final goose = Paint()..color = ColorTokens.mascotChickenShade;
+    final goose = _fill(ColorTokens.mascotChickenShade);
     for (var i = 0; i < 5; i++) {
       canvas.drawCircle(Offset(-3 + i * 1.5, -1.5 + (i % 2)), 0.35, goose);
     }
@@ -2079,7 +1879,7 @@ class _ErizogenesPainter extends CustomPainter {
         ..moveTo(5.6, -14)
         ..relativeQuadraticBezierTo(0.6, -1.6, 1.2, 0)
         ..relativeQuadraticBezierTo(0.6, -1.6, 1.2, 0),
-      Paint()..color = ColorTokens.mascotComb,
+      _fill(ColorTokens.mascotComb),
     );
     canvas.drawPath(
       Path()
@@ -2087,9 +1887,9 @@ class _ErizogenesPainter extends CustomPainter {
         ..relativeLineTo(2, 0.6)
         ..relativeLineTo(-2, 0.6)
         ..close(),
-      Paint()..color = ColorTokens.mascotFlame,
+      c.sun,
     );
-    canvas.drawCircle(const Offset(7.4, -12.2), 0.45, Paint()..color = c.ink);
+    canvas.drawCircle(const Offset(7.4, -12.2), 0.45, _fill(c.ink));
     final tail = _stroke(ColorTokens.mascotChicken, 1);
     canvas.drawLine(const Offset(-6, -1), const Offset(-8.2, -2.6), tail);
     canvas.drawLine(const Offset(-6, 0.6), const Offset(-8.4, 0.8), tail);
@@ -2106,7 +1906,7 @@ class _ErizogenesPainter extends CustomPainter {
       ..lineTo(18, 22)
       ..quadraticBezierTo(30, 8, 22, -10)
       ..close();
-    canvas.drawPath(body, c.lampClay);
+    canvas.drawPath(body, c.clay);
     canvas.drawPath(body, edge);
     final lip = Path()
       ..moveTo(-23.5, -12)
@@ -2114,34 +1914,18 @@ class _ErizogenesPainter extends CustomPainter {
       ..lineTo(22, -8)
       ..lineTo(-22, -8)
       ..close();
-    canvas.drawPath(lip, Paint()..color = c.lampDark);
+    canvas.drawPath(lip, _fill(c.clayDark));
     canvas.drawPath(lip, edge);
     canvas.drawLine(const Offset(-24, 2), const Offset(24, 2), edge);
     canvas.drawLine(const Offset(-22, 6), const Offset(22, 6), edge);
-    final key = Path();
-    for (var i = 0; i < 8; i++) {
-      final x = -18 + i * 4.6;
-      key
-        ..moveTo(x, 6)
-        ..lineTo(x, 3.6)
-        ..lineTo(x + 2.6, 3.6)
-        ..lineTo(x + 2.6, 5);
-    }
-    canvas.drawPath(key, _stroke(c.ink, 0.7));
-    canvas.drawPath(
-      Path()
-        ..moveTo(-17, -4)
-        ..quadraticBezierTo(-21, 8, -14, 16),
-      _stroke(c.bodyLight.withValues(alpha: 0.6), 1.6),
-    );
     canvas.restore();
   }
 
   /// El sol que nadie debe tapar.
   void _paintSun(Canvas canvas, _Palette c, Offset at) {
     const r = 6.0;
-    canvas.drawCircle(at, r, c.flame);
-    final ray = _stroke(c.flame.color, 1.4);
+    canvas.drawCircle(at, r, c.sun);
+    final ray = _stroke(c.sun.color, 1.4);
     for (var i = 0; i < 8; i++) {
       final a = i * math.pi / 4;
       final d = Offset(math.cos(a), math.sin(a));
@@ -2192,7 +1976,6 @@ class _ErizogenesPainter extends CustomPainter {
       old.look != look ||
       old.petted != petted ||
       old.weary != weary ||
-      old.figure != figure ||
       old.from != from ||
       old.morph != morph ||
       old.beat != beat ||
@@ -2200,139 +1983,4 @@ class _ErizogenesPainter extends CustomPainter {
       old.antic != antic ||
       old.anticT != anticT ||
       old.breathe != breathe;
-}
-
-/// El ánfora de figuras negras, en un lienzo de 120×160: cuello negro con
-/// hojas, meandro en el hombro, el panel de barro donde va Erizógenes y los
-/// rayos sobre el pie.
-class _VasePainter extends CustomPainter {
-  _VasePainter({required this.pose, required this.idle});
-
-  static const double width = 120;
-  static const double height = 160;
-
-  final MascotPose pose;
-  final double idle;
-
-  static final Path _shape = Path()
-    ..moveTo(40, 6)
-    ..lineTo(80, 6)
-    ..lineTo(78, 12)
-    ..lineTo(70, 16)
-    ..lineTo(68, 34)
-    ..quadraticBezierTo(96, 44, 98, 72)
-    ..cubicTo(100, 104, 78, 132, 66, 142)
-    ..lineTo(64, 148)
-    ..lineTo(74, 156)
-    ..lineTo(46, 156)
-    ..lineTo(56, 148)
-    ..lineTo(54, 142)
-    ..cubicTo(42, 132, 20, 104, 22, 72)
-    ..quadraticBezierTo(24, 44, 52, 34)
-    ..lineTo(50, 16)
-    ..lineTo(42, 12)
-    ..close();
-
-  static final Paint _clay = Paint()..color = ColorTokens.mascotVaseClay;
-  static final Paint _black = Paint()..color = ColorTokens.mascotVaseBlack;
-  static final Paint _stroke = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round
-    ..color = ColorTokens.mascotVaseBlack;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    canvas.save();
-    canvas.scale(size.width / width);
-
-    // Asas, detrás del cuerpo.
-    for (final handle in [
-      Path()
-        ..moveTo(51, 20)
-        ..cubicTo(30, 16, 20, 34, 30, 52),
-      Path()
-        ..moveTo(69, 20)
-        ..cubicTo(90, 16, 100, 34, 90, 52),
-    ]) {
-      canvas.drawPath(handle, _stroke..strokeWidth = 4.2);
-    }
-    canvas.drawPath(_shape, _clay);
-
-    canvas.save();
-    canvas.clipPath(_shape);
-    canvas.drawRect(const Rect.fromLTWH(0, 0, width, 33), _black);
-    final leaf = Paint()..color = ColorTokens.mascotVaseClay.withValues(alpha: 0.8);
-    for (var i = 0; i < 5; i++) {
-      final x = 50.0 + i * 5;
-      canvas.drawPath(
-        Path()
-          ..moveTo(x, 30)
-          ..quadraticBezierTo(x + 2.5, 20, x + 5, 30)
-          ..close(),
-        leaf,
-      );
-    }
-    // Meandro en el hombro, entre dos filetes.
-    const y = 47.0;
-    canvas.drawRect(const Rect.fromLTWH(0, y - 5.2, width, 1.2), _black);
-    canvas.drawRect(const Rect.fromLTWH(0, y + 2.2, width, 1.2), _black);
-    final key = Path();
-    for (var i = 0; i < 22; i++) {
-      final x = 4 + i * 5.2;
-      key
-        ..moveTo(x, y + 2)
-        ..lineTo(x, y - 3)
-        ..lineTo(x + 3.4, y - 3)
-        ..lineTo(x + 3.4, y)
-        ..lineTo(x + 1.7, y);
-    }
-    canvas.drawPath(key, _stroke..strokeWidth = 0.9);
-    // Franja negra con rayos sobre el pie.
-    canvas.drawRect(const Rect.fromLTWH(0, 122, width, 40), _black);
-    canvas.drawRect(const Rect.fromLTWH(0, 118, width, 1.2), _black);
-    final ray = Paint()..color = ColorTokens.mascotVaseClay.withValues(alpha: 0.85);
-    for (var i = 0; i < 9; i++) {
-      final x = 38 + i * 5.4;
-      canvas.drawPath(
-        Path()
-          ..moveTo(x, 146)
-          ..lineTo(x + 2.7, 126)
-          ..lineTo(x + 5.4, 146)
-          ..close(),
-        ray,
-      );
-    }
-    canvas.restore();
-
-    // La figura, pintada en el panel, sobre una línea de suelo.
-    canvas.save();
-    canvas.translate(33, 58);
-    canvas.scale(0.54);
-    _ErizogenesPainter(
-      pose: pose,
-      dark: false,
-      idle: idle,
-      aux: 0,
-      blink: 0,
-      figure: true,
-    ).paint(canvas, const Size(100, 100));
-    canvas.restore();
-    canvas.drawLine(const Offset(30, 114), const Offset(90, 114), _stroke..strokeWidth = 1.2);
-
-    // El brillo del barro cocido.
-    canvas.drawPath(
-      Path()
-        ..moveTo(30, 70)
-        ..quadraticBezierTo(30, 96, 42, 116),
-      _stroke
-        ..color = ColorTokens.mascotVaseHighlight.withValues(alpha: 0.35)
-        ..strokeWidth = 2,
-    );
-    _stroke.color = ColorTokens.mascotVaseBlack;
-
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(_VasePainter old) => old.pose != pose || old.idle != idle;
 }

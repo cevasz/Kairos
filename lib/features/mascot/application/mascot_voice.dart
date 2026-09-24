@@ -49,8 +49,8 @@ enum MascotReaction {
       };
 }
 
-/// Qué comenta el erizo cuando marcas una clase. Justificada y «posible
-/// falta» no merecen comentario: la primera es burocracia, la segunda aún no
+/// Qué comenta el erizo cuando marcas un bloque. Justificado y «posible
+/// salto» no merecen comentario: la primera es burocracia, la segunda aún no
 /// es un hecho.
 MascotReaction? reactionForStatus(SessionStatus status) => switch (status) {
       SessionStatus.asistio => MascotReaction.attended,
