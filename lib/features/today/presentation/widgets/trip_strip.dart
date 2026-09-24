@@ -72,6 +72,9 @@ class _Strip extends ConsumerWidget {
               ),
               const Spacer(),
               FilledButton.icon(
+                // Sin esto hereda el ancho entero del tema y, junto al Spacer,
+                // no se dibuja.
+                style: FilledButton.styleFrom(minimumSize: Size.square(ComponentTokens.buttonMinTouchTarget)),
                 onPressed: () => _arrive(context, ref),
                 icon: const Icon(Icons.flag_outlined),
                 label: const Text(STrip.arrived),
