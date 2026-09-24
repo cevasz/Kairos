@@ -28,6 +28,9 @@ class KairosApp extends ConsumerWidget {
     // Android decidió con la app cerrada.
     ref.watch(homeCheckSyncProvider);
     ref.watch(homeCheckVerdictsProvider);
+    // Kairós no tiene fin de semestre: los bloques se generan siempre por
+    // delante de hoy.
+    ref.watch(horizonSyncProvider);
     // El tema de color se instala antes de construir el ThemeData: los
     // ColorTokens lo consultan por rol (§48).
     final palette = ref.watch(paletteProvider);

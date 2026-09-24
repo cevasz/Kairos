@@ -23,11 +23,6 @@ class OnboardingScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // De fondo, Erizógenes pintado en un ánfora: la portada de la app
-          // también es la de un filósofo griego.
-          const SafeArea(
-            child: Align(alignment: Alignment.topCenter, child: MascotVase()),
-          ),
           SafeArea(
             child: ContentWidth(
               child: Padding(

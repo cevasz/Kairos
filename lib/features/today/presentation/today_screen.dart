@@ -626,15 +626,12 @@ class _EmptyDay extends ConsumerWidget {
     return Stack(
       alignment: Alignment.topCenter,
       children: [
-        // Detrás, su retrato en un ánfora, también dormido: el día vacío
-        // tiene algo de museo.
-        const MascotVase(pose: MascotPose.dormido),
         Padding(
           padding: EdgeInsets.symmetric(vertical: SpaceTokens.xxxl),
           child: Column(
             children: [
               // Erizógenes duerme, pero si lo tocas se despierta lo justo para
-              // decir algo útil: la próxima evaluación, una materia en riesgo.
+              // decir algo útil: un pendiente que vence, una actividad en riesgo.
               MascotCompanion.hero(
                 fallback: SEmptyDay.mascotLine,
                 heroPose: MascotPose.dormido,

@@ -591,19 +591,6 @@ class MascotStill extends StatelessWidget {
       );
 }
 
-/// El ánfora de fondo de la época terracota, retirada: Erizógenes morado no
-/// tiene vasija. Se queda como un hueco vacío solo para que las pantallas que
-/// aún la nombran compilen hasta quitarla; no pinta nada ni ocupa sitio.
-class MascotVase extends StatelessWidget {
-  const MascotVase({this.pose = MascotPose.reposo, this.width, super.key});
-
-  final MascotPose pose;
-  final double? width;
-
-  @override
-  Widget build(BuildContext context) => const SizedBox.shrink();
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // El dibujo
 //

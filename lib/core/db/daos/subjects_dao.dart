@@ -66,11 +66,10 @@ class SubjectDetail {
   List<DatedStatus> get history => [for (final i in instances) DatedStatus(i.fecha, i.estado)];
 }
 
-/// Duración por defecto de un semestre cuando el usuario todavía no ha definido
-/// uno. Dieciséis semanas es el período lectivo estándar en Colombia; es solo
-/// el rango en el que se materializan sesiones, y se puede acortar por clase
-/// con `fechaDesde` / `fechaHasta`.
-const int kDefaultSemesterWeeks = 16;
+/// Cuánto hacia adelante existen los bloques. Kairós no tiene fin de
+/// semestre: el periodo activo se corre solo (`rollHorizon`) y siempre hay
+/// este margen de semanas generadas por delante de hoy.
+const int kDefaultSemesterWeeks = 12;
 
 @DriftAccessor(
   tables: [Semesters, Subjects, ClassSessions, SessionInstances, Rooms, Evaluations, Tasks],
@@ -99,6 +98,23 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
         activo: const Value(true),
       ),
     );
+  }
+
+  /// Corre el periodo para que siempre haya [kDefaultSemesterWeeks] semanas
+  /// de bloques por delante de [today], y genera los que falten. Se llama al
+  /// abrir la app y al cambiar de día. Regenerar es idempotente (índice único
+  /// sesión-fecha), así que llamarlo de más no duplica nada.
+  Future<void> rollHorizon(DateTime today) async {
+    final semester = await ensureActiveSemester();
+    final day = DateTime(today.year, today.month, today.day);
+    final until = day.add(const Duration(days: kDefaultSemesterWeeks * 7));
+    if (!semester.fechaFin.isBefore(until)) return;
+    final from = semester.fechaFin.isAfter(day) ? semester.fechaFin : day;
+    await (update(semesters)..where((t) => t.id.equals(semester.id)))
+        .write(SemestersCompanion(fechaFin: Value(until)));
+    for (final s in await select(classSessions).get()) {
+      await db.scheduleDao.materialize(sessionId: s.id, diaSemana: s.diaSemana, from: from, to: until);
+    }
   }
 
   // ------------------------------------------------------------- lecturas

@@ -101,18 +101,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('el ánfora está retirada: no pinta nada ni ocupa sitio', (tester) async {
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.dark(),
-        home: const Center(child: MascotVase(pose: MascotPose.dormido)),
-      ),
-    );
-    expect(tester.takeException(), isNull);
-    expect(tester.getSize(find.byType(MascotVase)), Size.zero);
-    expect(find.byType(CustomPaint).evaluate().where((e) => (e.widget as CustomPaint).painter != null), isEmpty);
-  });
-
   dynamic state(WidgetTester tester) => tester.state(find.byType(MascotView));
 
   Widget beating(MascotBeat? beat, Object? key, {bool reduced = false, MascotPose pose = MascotPose.reposo}) =>

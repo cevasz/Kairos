@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/db/daos/subjects_dao.dart';
@@ -54,3 +56,10 @@ final subjectsOverviewProvider = StreamProvider<List<SubjectCard>>((ref) {
 /// seleccionado; la pantalla entonces abre la primera de la lista, porque un
 /// panel vacío con una lista al lado es una pregunta sin responder.
 final selectedSubjectProvider = StateProvider<int?>((ref) => null);
+
+/// Mantiene el periodo corriendo: al abrir y con cada cambio de día hay
+/// [kDefaultSemesterWeeks] semanas de bloques por delante.
+final horizonSyncProvider = Provider<void>((ref) {
+  final day = ref.watch(todayProvider);
+  unawaited(ref.read(subjectsDaoProvider).rollHorizon(day));
+});
