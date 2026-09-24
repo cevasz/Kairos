@@ -21,12 +21,6 @@ dependencies:
   path_provider: ^2.1.4
   path: ^1.9.0
 
-  # Navegación
-  go_router: ^14.2.7
-
-  # Animación
-  flutter_animate: ^4.5.0
-
   # Formato de fechas en es_CO
   intl: ^0.20.3
   # Importar calendario .ics: el selector de archivos es el del sistema.
