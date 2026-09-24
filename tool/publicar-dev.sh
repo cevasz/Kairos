@@ -18,7 +18,7 @@ APK_NAME="kairos-dev.apk"
 COMMITS=$(git rev-list --count HEAD)
 CODE=$(( 1000 + COMMITS ))
 BASE=$(grep '^version:' pubspec.yaml | sed 's/version: *//; s/+.*//')
-NAME="$BASE-dev.$COMMITS"
+NAME="$BASE.$COMMITS"  # Gradle le añade «-dev»
 NOTES="${1:-$(git log -5 --format='- %s')}"
 
 [ -z "$(git status --porcelain -- lib android pubspec.yaml design)" ] || {
