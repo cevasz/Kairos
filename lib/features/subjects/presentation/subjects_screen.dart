@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../domain/streaks/streaks.dart';
 import '../../../l10n/strings.g.dart';
+import '../../../theme/accent_card.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/cascade.dart';
 import '../../../theme/layout.dart';
@@ -250,29 +251,10 @@ class _SubjectTile extends ConsumerWidget {
               ),
             );
           },
-          child: Container(
-            padding: EdgeInsets.all(SpaceTokens.cardPadding),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(RadiusTokens.card),
-              border: Border(
-                left: BorderSide(
-                  color: accent,
-                  width: ComponentTokens.subjectCardAccentBorderLeft,
-                ),
-                top: BorderSide(
-                  color: ColorTokens.surfaceBorder.of(b),
-                  width: BorderTokens.hairline,
-                ),
-                right: BorderSide(
-                  color: ColorTokens.surfaceBorder.of(b),
-                  width: BorderTokens.hairline,
-                ),
-                bottom: BorderSide(
-                  color: ColorTokens.surfaceBorder.of(b),
-                  width: BorderTokens.hairline,
-                ),
-              ),
-            ),
+          // AccentCard: franja de color y filete con esquinas redondeadas.
+          // Un Border de lados distintos con radio revienta al pintar.
+          child: AccentCard(
+            accent: accent,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

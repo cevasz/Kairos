@@ -440,12 +440,14 @@ class _NextClassCard extends ConsumerWidget {
                     }
                     _mark(ref, next, SessionStatus.asistio);
                   },
-                  style: urgent
-                      ? FilledButton.styleFrom(
-                          backgroundColor: ColorTokens.accentUrgent.of(b),
-                          foregroundColor: ColorTokens.textOnUrgent.of(b),
-                        )
-                      : null,
+                  // El tema da a los botones el ancho entero (`Size.fromHeight`);
+                  // en una fila con Spacer eso es un ancho infinito y el botón
+                  // no se dibuja. Aquí el mínimo es el del área táctil.
+                  style: FilledButton.styleFrom(
+                    minimumSize: Size.square(ComponentTokens.buttonMinTouchTarget),
+                    backgroundColor: urgent ? ColorTokens.accentUrgent.of(b) : null,
+                    foregroundColor: urgent ? ColorTokens.textOnUrgent.of(b) : null,
+                  ),
                   child: const Text(SToday.onMyWay),
                 ),
               ),
