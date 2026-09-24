@@ -1,38 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Icono monocromo de la barra de estado: el símbolo del logo en silueta
-     blanca. Android lo tiñe solo. Generado por design/logo/generar.py. -->
+<!-- Generado por design/logo/generar.py: no editar a mano. Primer plano del
+     ícono adaptativo en la rejilla de 108 dp; el símbolo ocupa un círculo de
+     ~52 dp (escala LS), dentro de la zona segura de 66 dp. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp"
-    android:height="24dp"
-    android:viewportWidth="58"
-    android:viewportHeight="58">
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
     <group
-        android:translateX="-25"
-        android:translateY="-25"
         android:pivotX="54"
         android:pivotY="54"
-        android:scaleX="1"
-        android:scaleY="1">
+        android:scaleX="0.86"
+        android:scaleY="0.86">
         <path
             android:pathData="M75.57,43.48 A24,24 0 1 1 60.62,30.93"
-            android:strokeColor="#FFFFFFFF"
+            android:strokeColor="#F1E6D3"
             android:strokeWidth="6"
             android:strokeLineCap="round"
             android:strokeLineJoin="round" />
         <path
             android:pathData="M54,54 H40"
-            android:strokeColor="#FFFFFFFF"
+            android:strokeColor="#F1E6D3"
             android:strokeWidth="6"
             android:strokeLineCap="round"
             android:strokeLineJoin="round" />
         <path
             android:pathData="M54,54 L71.36,33.32"
-            android:strokeColor="#FFFFFFFF"
+            android:strokeColor="#CDB5EE"
             android:strokeWidth="6"
             android:strokeLineCap="round"
             android:strokeLineJoin="round" />
         <path
             android:pathData="M49.00,54.00 A5,5 0 1 0 59.00,54.00 A5,5 0 1 0 49.00,54.00Z"
-            android:fillColor="#FFFFFFFF" />
+            android:fillColor="#CDB5EE" />
     </group>
 </vector>
