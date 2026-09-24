@@ -1,0 +1,33 @@
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+
+# Generados: NUNCA se editan a mano, se regeneran.
+lib/theme/tokens.g.dart
+lib/l10n/strings.g.dart
+**/*.drift.dart
+**/*.g.dart
+!lib/**/tokens.g.dart.placeholder
+
+# Android: rutas de la máquina y caché de Gradle. El resto de android/ sí se versiona.
+android/local.properties
+# Firma: la escribe el workflow de GitHub desde sus secretos. Nunca al repo.
+android/key.properties
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+*.jks
+*.keystore
+
+# Secretos
+*.env
+.dart_define*.json
+
+# graphify
+graphify-out/.graphify_*

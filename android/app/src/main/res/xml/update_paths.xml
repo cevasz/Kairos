@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lo único que la app comparte con el instalador: la carpeta donde deja el
+     APK descargado. -->
+<paths>
+    <cache-path name="updates" path="updates/"/>
+</paths>

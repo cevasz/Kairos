@@ -1,0 +1,107 @@
+# Publica una versión de Kairós que el teléfono puede instalar sin cable.
+#
+# Se dispara al subir un tag `vX.Y.Z` (git tag -a v0.2.0 -m "notas" && git
+# push origin v0.2.0). Compila, pasa los tests, firma con la misma clave de la
+# app instalada y publica un Release con:
+#   kairos.apk    la app
+#   version.json   lo que la app lee para saber si hay algo nuevo
+#
+# El APK es público (el repositorio lo es), así que se compila SIN la clave de
+# la API de Claude: el importador usa el lector propio de horarios.
+#
+# Secretos que hay que crear una vez en GitHub → Settings → Secrets → Actions:
+#   ANDROID_KEYSTORE_BASE64   el keystore en base64
+#   ANDROID_KEYSTORE_PASSWORD
+#   ANDROID_KEY_ALIAS
+#   ANDROID_KEY_PASSWORD
+name: release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.2'
+          channel: stable
+          cache: true
+
+      - name: Dependencias y código generado
+        run: |
+          flutter pub get
+          dart run tool/gen_tokens.dart
+          dart run build_runner build --delete-conflicting-outputs
+
+      - name: Tests
+        run: flutter test
+
+      - name: Firma
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Falta el secreto ANDROID_KEYSTORE_BASE64: sin la clave de siempre, la versión no se podría instalar encima."
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+          {
+            echo "storeFile=release.keystore"
+            echo "storePassword=$KEYSTORE_PASSWORD"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/key.properties
+
+      - name: Compilar
+        id: build
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          NAME="${TAG#v}"
+          # El versionCode crece con cada publicación y siempre supera al de
+          # las compilaciones locales (que usan el +1 de pubspec).
+          CODE=$(( GITHUB_RUN_NUMBER + 1 ))
+          # Solo arm64: es lo que usan los teléfonos de hoy (el Galaxy A56
+          # incluido) y la descarga pesa un tercio que el APK universal.
+          flutter build apk --release --target-platform android-arm64 --build-name="$NAME" --build-number="$CODE"
+          cp build/app/outputs/flutter-apk/app-release.apk kairos.apk
+          # checkout deja el tag como ligero (sin notas): se trae el anotado.
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          NOTES=$(git tag -l --format='%(contents)' "$TAG" | sed '/^-----BEGIN/,$d')
+          jq -n \
+            --argjson code "$CODE" \
+            --arg name "$NAME" \
+            --arg apk "https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/kairos.apk" \
+            --arg notes "$NOTES" \
+            '{versionCode: $code, versionName: $name, apk: $apk, notes: $notes}' > version.json
+          cat version.json
+          {
+            echo "notes<<EOF"
+            echo "$NOTES"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          name: Kairós ${{ github.ref_name }}
+          body: ${{ steps.build.outputs.notes }}
+          files: |
+            kairos.apk
+            version.json

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2×2 por defecto; se estira a 4×2 (con la materia) y a 4×4 (ocho filas y
+     Erizógenes). Se actualiza cuando cambian tareas o evaluaciones y a
+     medianoche, igual que los otros dos. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="110dp"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_pending"
+    android:description="@string/widget_picker_pending_desc"
+    android:updatePeriodMillis="0" />

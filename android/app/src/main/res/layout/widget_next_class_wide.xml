@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 4×2 o más: el cuerpo de siempre a la izquierda y, a la derecha,
+     Erizógenes grande con su frase y lo que viene después. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:orientation="horizontal">
+
+    <ImageView
+        android:id="@+id/widget_accent"
+        android:layout_width="3dp"
+        android:layout_height="match_parent"
+        android:layout_marginVertical="12dp"
+        android:importantForAccessibility="no"
+        android:background="@color/kairos_surface_border" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1.2"
+        android:orientation="vertical"
+        android:gravity="center_vertical"
+        android:paddingStart="15dp"
+        android:paddingEnd="8dp"
+        android:paddingVertical="14dp">
+
+        <include layout="@layout/widget_next_class_body" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center"
+        android:paddingStart="4dp"
+        android:paddingEnd="16dp"
+        android:paddingVertical="12dp">
+
+        <ImageView
+            android:id="@+id/widget_mascot"
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:importantForAccessibility="no"
+            android:scaleType="fitCenter" />
+
+        <TextView
+            android:id="@+id/widget_quip"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:gravity="center"
+            android:textSize="12sp"
+            android:textStyle="italic"
+            android:textColor="@color/kairos_text_secondary"
+            android:maxLines="3"
+            android:ellipsize="end" />
+
+        <TextView
+            android:id="@+id/widget_after"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:fontFamily="monospace"
+            android:textSize="10sp"
+            android:textColor="@color/kairos_text_tertiary"
+            android:maxLines="1"
+            android:ellipsize="end" />
+    </LinearLayout>
+</LinearLayout>

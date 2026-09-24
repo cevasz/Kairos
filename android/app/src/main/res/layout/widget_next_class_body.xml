@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- El cuerpo común del widget «Próxima clase»: mediano y ancho lo incluyen. -->
+<merge xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <TextView
+        android:id="@+id/widget_eyebrow"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace"
+        android:textSize="10sp"
+        android:textColor="@color/kairos_text_tertiary"
+        android:maxLines="1" />
+
+    <TextView
+        android:id="@+id/widget_big"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="34sp"
+        android:includeFontPadding="false"
+        android:textColor="@color/kairos_text_primary"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <Chronometer
+        android:id="@+id/widget_countdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:fontFamily="monospace"
+        android:textSize="11sp"
+        android:textColor="@color/kairos_accent_primary"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:fontFamily="sans-serif-medium"
+        android:textSize="14sp"
+        android:textColor="@color/kairos_text_primary"
+        android:maxLines="2"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_meta"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@color/kairos_text_secondary"
+        android:maxLines="1"
+        android:ellipsize="end" />
+
+    <TextView
+        android:id="@+id/widget_arrive"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:fontFamily="monospace"
+        android:textSize="10sp"
+        android:textColor="@color/kairos_accent_primary"
+        android:maxLines="2"
+        android:ellipsize="end" />
+</merge>

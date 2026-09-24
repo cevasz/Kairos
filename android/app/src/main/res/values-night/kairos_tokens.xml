@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- GENERADO por tool/gen_tokens.dart desde design/tokens.json. NO EDITAR A MANO. -->
+<resources>
+    <color name="kairos_surface_base">#FF14100E</color>
+    <color name="kairos_surface_card">#FF1F1A16</color>
+    <color name="kairos_surface_raised">#FF2A231D</color>
+    <color name="kairos_surface_border">#FF3D342B</color>
+    <color name="kairos_surface_scrim">#8C14100E</color>
+    <color name="kairos_surface_widget">#F51F1A16</color>
+    <color name="kairos_surface_ambient_warm_night">#FF171210</color>
+    <color name="kairos_surface_ambient_neutral_noon">#FF14100E</color>
+    <color name="kairos_accent_primary">#FFC89B5C</color>
+    <color name="kairos_accent_urgent">#FFB05B3E</color>
+    <color name="kairos_accent_ok">#FF7C8A5C</color>
+    <color name="kairos_accent_attention">#FFC4922E</color>
+    <color name="kairos_text_primary">#FFEDE4D8</color>
+    <color name="kairos_text_secondary">#FFA2968A</color>
+    <color name="kairos_text_tertiary">#FF6E645A</color>
+    <color name="kairos_text_on_accent">#FF231B12</color>
+    <color name="kairos_text_on_subject">#FFEDE4D8</color>
+    <color name="kairos_text_on_urgent">#FFF7EFE8</color>
+    <color name="kairos_subject_0">#FF8B4A4A</color>
+    <color name="kairos_subject_1">#FF6E8478</color>
+    <color name="kairos_subject_2">#FFA67C4E</color>
+    <color name="kairos_subject_3">#FF7A6A8C</color>
+    <color name="kairos_subject_4">#FF8C7A3F</color>
+    <color name="kairos_subject_5">#FF9C5F4A</color>
+    <color name="kairos_subject_6">#FF5D7080</color>
+    <color name="kairos_subject_7">#FF7C8A5C</color>
+</resources>

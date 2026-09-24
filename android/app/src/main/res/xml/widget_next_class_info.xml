@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 2×2 por defecto (168 dp del prototipo). Se encoge a 2×1 y se estira a 4×2
+     y más: cada tamaño tiene su layout (NextClassWidgetProvider). Sin
+     updatePeriodMillis: la app programa las actualizaciones exactas (hora de
+     salir, inicio y fin de cada clase) con HomeWidget.scheduleWidgetUpdates. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="40dp"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:initialLayout="@layout/widget_next_class"
+    android:description="@string/widget_picker_next_desc"
+    android:updatePeriodMillis="0" />
