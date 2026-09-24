@@ -6,17 +6,26 @@ import 'package:flutter/services.dart';
 
 import '../../domain/updates/update_manifest.dart';
 
-/// Dónde publica cada versión su `version.json`. `latest/download` redirige
-/// siempre al Release más reciente del repositorio, así que la URL no cambia.
+/// Dónde publica cada canal su `version.json` (§52). La estable lee el
+/// Release más reciente (`latest/download` redirige siempre a él, y un
+/// pre-release nunca es «latest»); la Dev lee el pre-release fijo `dev`, que
+/// `tool/publicar-dev.sh` reemplaza en cada entrega.
 final Uri kUpdateManifestUrl =
     Uri.parse('https://github.com/cevasz/Kairos/releases/latest/download/version.json');
+final Uri kDevManifestUrl =
+    Uri.parse('https://github.com/cevasz/Kairos/releases/download/dev/version.json');
 
 /// La versión instalada, la red y el instalador de Android.
 ///
 /// Todo falla en silencio hacia `null`/`false`: sin red o fuera de Android la
 /// app sigue igual, solo que no se entera de versiones nuevas.
 class UpdateChannel {
-  UpdateChannel({HttpClient? client}) : _client = client ?? HttpClient();
+  UpdateChannel({HttpClient? client, Uri? manifest})
+      : _client = client ?? HttpClient(),
+        _manifest = manifest ?? kUpdateManifestUrl;
+
+  /// El `version.json` del canal de esta compilación.
+  final Uri _manifest;
 
   static const _channel = MethodChannel('kairos/updates');
 
@@ -45,7 +54,7 @@ class UpdateChannel {
 
   Future<UpdateManifest?> fetchManifest([Uri? url]) async {
     try {
-      final request = await _client.getUrl(url ?? kUpdateManifestUrl).timeout(_manifestTimeout);
+      final request = await _client.getUrl(url ?? _manifest).timeout(_manifestTimeout);
       request.followRedirects = true;
       final response = await request.close().timeout(_manifestTimeout);
       if (response.statusCode != HttpStatus.ok) {

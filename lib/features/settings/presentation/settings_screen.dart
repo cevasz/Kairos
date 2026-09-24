@@ -437,7 +437,6 @@ class _UpdatesCard extends ConsumerWidget {
     final available = check.valueOrNull?.available;
 
     final subtitle = switch (check) {
-      _ when isDevBuild => SBackup.devBuild,
       AsyncLoading() => SUpdates.checking,
       AsyncData(:final value) when value.available != null =>
         SUpdates.available(version: value.available!.versionName),

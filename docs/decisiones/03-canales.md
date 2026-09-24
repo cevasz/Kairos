@@ -15,3 +15,9 @@ Heredado de Cátedra §51 (24 sep 2026).
   archivo, guarda la base vieja como `.antes-de-restaurar` y reabre.
 - Todavía no hay repositorio en GitHub: `tool/publicar.sh` apunta a
   `cevasz/Kairos`, que hay que crear antes de la primera versión.
+
+## La Dev también se actualiza sola (Cátedra §52)
+
+La Dev lee `releases/download/dev/version.json`, un pre-release fijo `dev`
+que `tool/publicar-dev.sh` reemplaza en cada entrega. Se compila en el
+equipo (firma de depuración); versionCode = 1000 + número de commits.

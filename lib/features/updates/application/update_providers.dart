@@ -11,7 +11,9 @@ import '../../../domain/updates/update_manifest.dart';
 /// La compilación de trabajo (`--flavor dev`): «Kairós Dev».
 bool get isDevBuild => appFlavor == 'dev';
 
-final updateChannelProvider = Provider<UpdateChannel>((ref) => UpdateChannel());
+final updateChannelProvider = Provider<UpdateChannel>(
+  (ref) => UpdateChannel(manifest: isDevBuild ? kDevManifestUrl : kUpdateManifestUrl),
+);
 
 /// Lo que se sabe de las versiones: la instalada y la última publicada.
 class UpdateCheck {
@@ -39,9 +41,6 @@ class UpdateCheck {
 final updateCheckProvider = FutureProvider<UpdateCheck>((ref) async {
   final channel = ref.watch(updateChannelProvider);
   final installed = await channel.installed();
-  // «Kairós Dev» se instala por cable desde el equipo: las versiones de
-  // GitHub son de la estable, con otro id, y no le sirven (§51).
-  if (isDevBuild) return UpdateCheck(installed: installed, latest: null);
   final latest = await channel.fetchManifest();
   return UpdateCheck(installed: installed, latest: latest);
 });
