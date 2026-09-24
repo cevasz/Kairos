@@ -33,7 +33,7 @@ class MainActivity : FlutterActivity() {
                 )
                 "requestNotifications" -> result.success(requestNotifications())
                 "scheduleReminders" -> {
-                    EvalReminders.schedule(
+                    PendingReminders.schedule(
                         this,
                         channelName = call.argument<String>("channel").orEmpty(),
                         items = call.argument<List<Map<String, Any>>>("items").orEmpty(),

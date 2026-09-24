@@ -15,11 +15,11 @@ import es.antonborri.home_widget.HomeWidgetProvider
 import java.time.LocalDate
 
 /**
- * Widget «Pendientes»: evaluaciones sin nota y tareas abiertas de todas las
- * materias, de la más cercana a la más lejana, con el color de su materia.
+ * Widget «Pendientes»: lo que falta por hacer en todas las actividades, de
+ * lo más cercano a lo más lejano, con el color de su actividad.
  *
  *  - 2×2: cuatro filas, con cuándo;
- *  - 4×2: cinco filas, con materia y cuándo;
+ *  - 4×2: cinco filas, con actividad y cuándo;
  *  - 4×4: ocho filas y Erizógenes en el pie.
  *
  * Sin nada pendiente, solo el erizo con su frase: es la mejor noticia posible.
@@ -123,9 +123,8 @@ class PendingWidgetProvider : HomeWidgetProvider() {
             v.setViewVisibility(rows[i], View.VISIBLE)
             v.setInt(dots[i], "setColorFilter", WidgetData.subjectColor(context, p.color))
             v.setTextViewText(titles[i], p.title)
-            val kind = if (p.isEval) data!!.s("pendingEval") else ""
             val meta = listOf(
-                if (size.withSubject) p.subject else kind,
+                if (size.withSubject) p.subject else "",
                 p.whenLabel,
             ).filter { it.isNotEmpty() }.joinToString(" · ")
             v.setTextViewText(metas[i], meta)

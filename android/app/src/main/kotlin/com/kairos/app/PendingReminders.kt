@@ -12,17 +12,17 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 
 /**
- * Avisos de la víspera de una evaluación. El Reloj no sirve para esto: sus
+ * Avisos de la víspera de un pendiente con fecha. El Reloj no sirve para esto: sus
  * alarmas solo saben de días de la semana, no de fechas. Así que son
  * notificaciones de Kairós, programadas con AlarmManager.
  *
  * Cada `schedule` reemplaza todos los anteriores: la app vuelve a mandar la
- * lista completa cada vez que cambian las evaluaciones o el ajuste.
+ * lista completa cada vez que cambian los pendientes o el ajuste.
  */
-object EvalReminders {
+object PendingReminders {
     private const val PREFS = "kairos_reminders"
     private const val IDS = "ids"
-    const val CHANNEL = "kairos_evaluations"
+    const val CHANNEL = "kairos_pending"
 
     fun schedule(context: Context, channelName: String, items: List<Map<String, Any>>) {
         val am = context.getSystemService(AlarmManager::class.java)
@@ -34,7 +34,7 @@ object EvalReminders {
         for (item in items) {
             val id = (item["id"] as Number).toInt()
             val at = (item["at"] as Number).toLong()
-            val intent = Intent(context, EvalReminderReceiver::class.java)
+            val intent = Intent(context, PendingReminderReceiver::class.java)
                 .putExtra("id", id)
                 .putExtra("title", item["title"] as String)
                 .putExtra("body", item["body"] as String)
@@ -48,20 +48,20 @@ object EvalReminders {
     }
 
     private fun pending(context: Context, id: Int, intent: Intent?): PendingIntent? {
-        val i = intent ?: Intent(context, EvalReminderReceiver::class.java)
+        val i = intent ?: Intent(context, PendingReminderReceiver::class.java)
         val flags = PendingIntent.FLAG_IMMUTABLE or
             if (intent == null) PendingIntent.FLAG_NO_CREATE else PendingIntent.FLAG_UPDATE_CURRENT
         return PendingIntent.getBroadcast(context, id, i, flags)
     }
 }
 
-class EvalReminderReceiver : BroadcastReceiver() {
+class PendingReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val nm = context.getSystemService(NotificationManager::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val name = intent.getStringExtra("channel").orEmpty().ifEmpty { EvalReminders.CHANNEL }
+            val name = intent.getStringExtra("channel").orEmpty().ifEmpty { PendingReminders.CHANNEL }
             nm.createNotificationChannel(
-                NotificationChannel(EvalReminders.CHANNEL, name, NotificationManager.IMPORTANCE_HIGH),
+                NotificationChannel(PendingReminders.CHANNEL, name, NotificationManager.IMPORTANCE_HIGH),
             )
         }
         val open = PendingIntent.getActivity(
@@ -70,7 +70,7 @@ class EvalReminderReceiver : BroadcastReceiver() {
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_IMMUTABLE,
         )
-        val notification = NotificationCompat.Builder(context, EvalReminders.CHANNEL)
+        val notification = NotificationCompat.Builder(context, PendingReminders.CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_kairos)
             .setContentTitle(intent.getStringExtra("title"))
             .setContentText(intent.getStringExtra("body"))

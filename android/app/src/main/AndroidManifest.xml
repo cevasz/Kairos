@@ -90,7 +90,7 @@
                 android:resource="@xml/widget_today_info"/>
         </receiver>
         <receiver
-            android:name=".EvalReminderReceiver"
+            android:name=".PendingReminderReceiver"
             android:exported="false" />
         <receiver
             android:name=".PendingWidgetProvider"

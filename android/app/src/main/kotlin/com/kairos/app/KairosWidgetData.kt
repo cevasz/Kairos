@@ -35,14 +35,13 @@ data class WidgetClass(
     val isLive get() = status == "pending"
 }
 
-/** Un pendiente: una tarea o una evaluación sin nota, con su materia. */
+/** Un pendiente de una actividad, con su fecha si la tiene. */
 data class WidgetPending(
     val subject: String,
     val color: Int,
     val title: String,
     val whenLabel: String,
     val date: String?,
-    val isEval: Boolean,
 )
 
 /** A qué hora llegas y con cuánto margen. `late` en minutos si llegas tarde. */
@@ -183,7 +182,6 @@ class WidgetData(
                         title = e.getString("title"),
                         whenLabel = e.optString("when"),
                         date = if (e.isNull("date")) null else e.getString("date"),
-                        isEval = e.getString("kind") == "eval",
                     )
                 }
                 WidgetData(
