@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/time/minutes_of_day.dart';
-import '../../../../domain/import/schedule_parser.dart';
+import '../../../../domain/import/parsed_schedule.dart';
 import '../../../../l10n/strings.g.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../theme/tokens.g.dart';
@@ -82,7 +82,7 @@ class _SheetState extends State<_Sheet> {
 
   void _save() {
     if (_dia == 0) {
-      setState(() => _error = SPdfConfirm.doubtDays);
+      setState(() => _error = SImportConfirm.doubtDays);
       return;
     }
     if (_fin <= _inicio) {
@@ -105,7 +105,7 @@ class _SheetState extends State<_Sheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.existing == null ? SSessionForm.titleNew : SPdfConfirm.editSession,
+              widget.existing == null ? SSessionForm.titleNew : SImportConfirm.editSession,
               style: context.type(TypeTokens.titleM),
             ),
             SizedBox(height: SpaceTokens.l),
@@ -162,7 +162,7 @@ class _SheetState extends State<_Sheet> {
               SizedBox(height: SpaceTokens.s),
               TextButton(
                 onPressed: () => Navigator.of(context).pop(const ParsedSessionRemoved()),
-                child: const Text(SPdfConfirm.removeSession),
+                child: const Text(SImportConfirm.removeSession),
               ),
             ],
           ],

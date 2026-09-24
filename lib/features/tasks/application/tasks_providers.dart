@@ -4,13 +4,13 @@ import '../../../core/db/daos/tasks_dao.dart';
 import '../../../core/db/database.dart';
 import '../../../core/providers.dart';
 
-/// Las tareas de una materia, abiertas primero.
+/// Los pendientes de una actividad, abiertos primero.
 final subjectTasksProvider = StreamProvider.family<List<Task>, int>(
   (ref, subjectId) => ref.watch(tasksDaoProvider).watchForSubject(subjectId),
 );
 
-/// Todo lo pendiente de materias vivas: tareas abiertas y evaluaciones sin
-/// nota desde hoy. Lo leen el widget de pendientes y las alarmas.
+/// Todo lo pendiente de actividades vivas. Lo leen el widget de pendientes
+/// y los avisos de la víspera.
 final pendingProvider = StreamProvider<List<PendingItem>>(
-  (ref) => ref.watch(tasksDaoProvider).watchPending(ref.watch(todayProvider)),
+  (ref) => ref.watch(tasksDaoProvider).watchPending(),
 );

@@ -1,5 +1,5 @@
 name: kairos
-description: Gestión académica para estudiantes universitarios en Colombia.
+description: "Tu rutina del día a día: a qué hora salir, pendientes y rachas."
 publish_to: none
 version: 0.2.0+2
 
@@ -29,10 +29,8 @@ dependencies:
 
   # Formato de fechas en es_CO
   intl: ^0.20.3
-  # Importar PDF (Fase 3). El selector es del sistema; el texto se extrae en
-  # el teléfono con Syncfusion (licencia comunitaria, puro Dart).
+  # Importar calendario .ics: el selector de archivos es el del sistema.
   file_picker: ^12.3.0
-  syncfusion_flutter_pdf: ^34.2.7
   flutter_map: ^8.3.2
   latlong2: ^0.10.1
   geolocator: ^14.0.3

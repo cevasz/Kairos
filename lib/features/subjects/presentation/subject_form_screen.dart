@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../core/db/daos/subjects_dao.dart';
 import '../../../core/providers.dart';
@@ -16,7 +15,7 @@ import '../../subject_detail/application/subject_detail_providers.dart';
 import 'widgets/session_form_sheet.dart';
 import 'widgets/subject_color_picker.dart';
 
-/// Alta y edición de una materia, con su horario.
+/// Alta y edición de una actividad, con su horario.
 ///
 /// El prototipo ofrece «Entrar los datos a mano» pero no dibuja el formulario.
 /// El layout se arma con los componentes que el contrato sí especifica
@@ -25,7 +24,7 @@ import 'widgets/subject_color_picker.dart';
 class SubjectFormScreen extends ConsumerStatefulWidget {
   const SubjectFormScreen({this.subjectId, super.key});
 
-  /// Null en alta. En edición, la materia que se está tocando.
+  /// Null en alta. En edición, la actividad que se está tocando.
   final int? subjectId;
 
   @override
@@ -36,15 +35,13 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nombre = TextEditingController();
   final _profesor = TextEditingController();
-  final _creditos = TextEditingController();
   final _limite = TextEditingController();
 
   int _colorIndex = 0;
-  DateTime? _fechaLimite;
 
   /// Se rellena al guardar por primera vez. A partir de ahí el formulario está
   /// en modo edición aunque se haya abierto en alta: hace falta un id real
-  /// antes de poder colgarle clases.
+  /// antes de poder colgarle bloques.
   int? _subjectId;
 
   bool _loaded = false;
@@ -71,7 +68,6 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
   void dispose() {
     _nombre.dispose();
     _profesor.dispose();
-    _creditos.dispose();
     _limite.dispose();
     super.dispose();
   }
@@ -81,21 +77,18 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
     _loaded = true;
     _nombre.text = detail.subject.nombre;
     _profesor.text = detail.subject.profesor ?? '';
-    _creditos.text = detail.subject.creditos?.toString() ?? '';
     _limite.text = detail.subject.limiteFaltas.toString();
     _colorIndex = detail.subject.colorIndex;
-    _fechaLimite = detail.subject.fechaLimiteCancelacion;
   }
 
-  /// Guarda y devuelve el id. Crear la materia antes de añadirle clases es lo
-  /// que permite que «Agregar una clase» funcione en un alta recién empezada.
+  /// Guarda y devuelve el id. Crear la actividad antes de añadirle bloques es
+  /// lo que permite que «Agregar un bloque» funcione en un alta recién empezada.
   Future<int?> _persist() async {
     if (!(_formKey.currentState?.validate() ?? false)) return null;
     final dao = ref.read(subjectsDaoProvider);
 
     final nombre = _nombre.text.trim();
     final profesor = _profesor.text.trim();
-    final creditos = int.tryParse(_creditos.text.trim());
     final limite =
         int.tryParse(_limite.text.trim()) ?? AttendanceCounter.defaultLimit;
 
@@ -105,8 +98,6 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
         colorIndex: _colorIndex,
         limiteFaltas: limite,
         profesor: profesor.isEmpty ? null : profesor,
-        creditos: creditos,
-        fechaLimiteCancelacion: _fechaLimite,
       );
       setState(() => _subjectId = id);
       return id;
@@ -118,8 +109,6 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
       colorIndex: _colorIndex,
       limiteFaltas: limite,
       profesor: profesor.isEmpty ? null : profesor,
-      creditos: creditos,
-      fechaLimiteCancelacion: _fechaLimite,
     );
     return _subjectId;
   }
@@ -168,7 +157,7 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
     Haptics.fire('confirmarDestructivo');
     await ref.read(subjectsDaoProvider).deleteSubject(id);
     if (!mounted) return;
-    // Dos pops: el formulario y, si venía de ahí, el detalle de la materia que
+    // Dos pops: el formulario y, si venía de ahí, el detalle de la actividad que
     // acaba de dejar de existir.
     Navigator.of(context).popUntil((r) => r.isFirst);
   }
@@ -223,36 +212,19 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
                       hintText: SSubjectForm.hintProfesor),
                 ),
               ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: _Field(
-                      label: SSubjectForm.fieldCreditos,
-                      child: TextFormField(
-                        controller: _creditos,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: SpaceTokens.l),
-                  Expanded(
-                    child: _Field(
-                      label: SSubjectForm.fieldLimiteFaltas,
-                      hint: SSubjectForm.hintLimiteFaltas,
-                      child: TextFormField(
-                        controller: _limite,
-                        keyboardType: TextInputType.number,
-                        validator: (v) {
-                          final n = int.tryParse((v ?? '').trim());
-                          return (n == null || n < 1)
-                              ? SSubjectForm.errorLimite
-                              : null;
-                        },
-                      ),
-                    ),
-                  ),
-                ],
+              _Field(
+                label: SSubjectForm.fieldLimiteFaltas,
+                hint: SSubjectForm.hintLimiteFaltas,
+                child: TextFormField(
+                  controller: _limite,
+                  keyboardType: TextInputType.number,
+                  validator: (v) {
+                    final n = int.tryParse((v ?? '').trim());
+                    return (n == null || n < 1)
+                        ? SSubjectForm.errorLimite
+                        : null;
+                  },
+                ),
               ),
               _Field(
                 label: SSubjectForm.fieldColor,
@@ -260,18 +232,6 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
                 child: SubjectColorPicker(
                   selected: _colorIndex,
                   onChanged: (i) => setState(() => _colorIndex = i),
-                ),
-              ),
-              _Field(
-                label: SSubjectForm.fieldFechaLimite,
-                child: OutlinedButton(
-                  onPressed: _pickWithdrawalDate,
-                  child: Text(
-                    _fechaLimite == null
-                        ? SSubjectForm.fechaLimiteNone
-                        : DateFormat("d 'de' MMMM", 'es_CO')
-                            .format(_fechaLimite!),
-                  ),
                 ),
               ),
               SizedBox(height: SpaceTokens.l),
@@ -331,19 +291,6 @@ class _SubjectFormScreenState extends ConsumerState<SubjectFormScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _pickWithdrawalDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _fechaLimite ?? now,
-      // Fechas absolutas, no offsets: el rango cubre el semestre en curso y el
-      // siguiente, que es donde puede caer una fecha de cancelación real.
-      firstDate: DateTime(now.year - 1),
-      lastDate: DateTime(now.year + 2),
-    );
-    if (picked != null) setState(() => _fechaLimite = picked);
   }
 }
 

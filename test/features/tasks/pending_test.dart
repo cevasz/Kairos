@@ -5,12 +5,11 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   late KairosDatabase db;
-  final today = DateTime(2026, 9, 22);
 
   setUp(() async {
     db = KairosDatabase.forTesting(NativeDatabase.memory());
     final semester = await db.subjectsDao.ensureActiveSemester();
-    for (final (nombre, cancelada) in [('Física', false), ('Química', false), ('Arte', true)]) {
+    for (final (nombre, cancelada) in [('Gimnasio', false), ('Trabajo', false), ('Pintura', true)]) {
       await db.into(db.subjects).insert(SubjectsCompanion.insert(
             semesterId: semester.id,
             nombre: nombre,
@@ -22,36 +21,22 @@ void main() {
 
   tearDown(() => db.close());
 
-  Future<void> eval(int subjectId, String nombre, DateTime? fecha, {double? nota}) =>
-      db.into(db.evaluations).insert(EvaluationsCompanion.insert(
-            subjectId: subjectId,
-            nombre: nombre,
-            porcentaje: 0.3,
-            nota: Value(nota),
-            fecha: Value(fecha),
-          ));
-
-  test('pendientes: tareas abiertas y evaluaciones sin nota desde hoy, por fecha', () async {
+  test('pendientes: los abiertos de actividades vivas, por fecha; sin fecha al final', () async {
     final dao = db.tasksDao;
-    await dao.addTask(subjectId: 1, titulo: 'Leer cap. 4');
-    await dao.addTask(subjectId: 2, titulo: 'Taller 3', fecha: DateTime(2026, 9, 25));
+    await dao.addTask(subjectId: 1, titulo: 'Renovar la tarjeta');
+    await dao.addTask(subjectId: 2, titulo: 'Llevar la toalla', fecha: DateTime(2026, 9, 25));
     final hecha = await dao.addTask(subjectId: 1, titulo: 'Ya hecha', fecha: DateTime(2026, 9, 23));
     await dao.setDone(hecha, done: true);
-    await dao.addTask(subjectId: 3, titulo: 'De materia cancelada', fecha: DateTime(2026, 9, 23));
+    await dao.addTask(subjectId: 3, titulo: 'De actividad en pausa', fecha: DateTime(2026, 9, 23));
+    await dao.addTask(subjectId: 2, titulo: 'Vencido', fecha: DateTime(2026, 9, 20));
 
-    await eval(1, 'Parcial 1', DateTime(2026, 9, 24));
-    await eval(1, 'Quiz ya pasado', DateTime(2026, 9, 20));
-    await eval(2, 'Parcial calificado', DateTime(2026, 9, 26), nota: 4.2);
-    await eval(2, 'Parcial de hoy', today);
-
-    final items = await dao.watchPending(today).first;
-    expect(items.map((i) => i.titulo), ['Parcial de hoy', 'Parcial 1', 'Taller 3', 'Leer cap. 4']);
-    expect(items.first.isEvaluation, isTrue);
-    expect(items.first.subject.nombre, 'Química');
+    final items = await dao.watchPending().first;
+    expect(items.map((i) => i.titulo), ['Vencido', 'Llevar la toalla', 'Renovar la tarjeta']);
+    expect(items.first.subject.nombre, 'Trabajo');
     expect(items.last.fecha, isNull);
   });
 
-  test('borrar una materia se lleva sus tareas', () async {
+  test('borrar una actividad se lleva sus pendientes', () async {
     await db.tasksDao.addTask(subjectId: 1, titulo: 'Taller');
     await db.subjectsDao.deleteSubject(1);
     expect(await db.select(db.tasks).get(), isEmpty);

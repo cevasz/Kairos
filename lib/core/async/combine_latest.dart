@@ -78,3 +78,12 @@ Stream<R> combineLatest4<A, B, C, D, R>(
 
   return controller.stream;
 }
+
+/// Lo mismo con tres streams: el cuarto es un valor fijo que habla una vez.
+Stream<R> combineLatest3<A, B, C, R>(
+  Stream<A> a,
+  Stream<B> b,
+  Stream<C> c,
+  R Function(A, B, C) combine,
+) =>
+    combineLatest4<A, B, C, void, R>(a, b, c, Stream<void>.value(null), (x, y, z, _) => combine(x, y, z));

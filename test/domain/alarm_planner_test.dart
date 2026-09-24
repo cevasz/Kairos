@@ -60,19 +60,19 @@ void main() {
     );
   });
 
-  test('avisos de evaluación: la víspera a la hora pedida, solo los que no pasaron', () {
+  test('avisos de pendientes: la víspera a la hora pedida, solo los que no pasaron', () {
     final now = DateTime(2026, 9, 22, 21);
-    final reminders = AlarmPlanner.evaluationReminders(
-      evaluations: [
-        DatedEvaluation(id: 1, name: 'Parcial 1', subject: 'Física', date: DateTime(2026, 9, 25)),
+    final reminders = AlarmPlanner.pendingReminders(
+      pending: [
+        DatedPending(id: 1, name: 'Pagar el arriendo', subject: 'Casa', date: DateTime(2026, 9, 25)),
         // La víspera fue hoy a las 20:00: ya pasó.
-        DatedEvaluation(id: 2, name: 'Quiz', subject: 'Química', date: DateTime(2026, 9, 23)),
-        DatedEvaluation(id: 3, name: 'Taller', subject: 'Álgebra', date: DateTime(2026, 9, 24)),
+        DatedPending(id: 2, name: 'Llevar la toalla', subject: 'Gimnasio', date: DateTime(2026, 9, 23)),
+        DatedPending(id: 3, name: 'Enviar el informe', subject: 'Trabajo', date: DateTime(2026, 9, 24)),
       ],
       reminderMinute: 20 * 60,
       now: now,
     );
-    expect(reminders.map((r) => r.evaluation.id), [3, 1]);
+    expect(reminders.map((r) => r.pending.id), [3, 1]);
     expect(reminders.first.at, DateTime(2026, 9, 23, 20));
   });
 

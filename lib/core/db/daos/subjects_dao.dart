@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../domain/attendance/attendance.dart';
+import '../../../domain/streaks/streaks.dart';
 import '../../async/combine_latest.dart';
 import '../database.dart';
 import '../tables.dart';
@@ -9,14 +10,14 @@ part 'subjects_dao.g.dart';
 
 /// Una fila de la lista de materias, ya con lo que la tarjeta necesita.
 ///
-/// Lleva los datos crudos, no los cálculos: quién los interpreta es
-/// `AttendanceCounter` y `GradeCalculator`, que son Dart puro y viven en el
-/// dominio. Esta clase solo evita cuatro consultas por materia.
+/// Lleva los datos crudos, no los cálculos: quien los interpreta es
+/// `AttendanceCounter`, que es Dart puro y vive en el dominio. Esta clase solo
+/// evita cuatro consultas por actividad.
 class SubjectOverview {
   const SubjectOverview({
     required this.subject,
     required this.weeklyClasses,
-    required this.statuses,
+    required this.history,
     required this.evaluations,
   });
 
@@ -26,9 +27,14 @@ class SubjectOverview {
   /// instancias: la tarjeta dice «2 a la semana», no «32 en el semestre».
   final int weeklyClasses;
 
-  /// Estado de cada sesión ya materializada. Alimenta el contador de faltas.
-  final List<SessionStatus> statuses;
+  /// Cada sesión ya materializada con su fecha y su estado. Alimenta el
+  /// contador de saltos y la racha.
+  final List<DatedStatus> history;
 
+  List<SessionStatus> get statuses => [for (final h in history) h.status];
+
+  /// Herencia de Cátedra: Kairós ya no crea evaluaciones, pero la tabla sigue
+  /// y la mascota todavía la lee. Vacía en una instalación nueva.
   final List<Evaluation> evaluations;
 }
 
@@ -46,7 +52,6 @@ class SubjectDetail {
     required this.subject,
     required this.sessions,
     required this.instances,
-    required this.evaluations,
   });
 
   final Subject subject;
@@ -56,9 +61,9 @@ class SubjectDetail {
   /// de la pestaña Asistencia se lee en ese orden.
   final List<SessionInstance> instances;
 
-  final List<Evaluation> evaluations;
-
   List<SessionStatus> get statuses => instances.map((i) => i.estado).toList();
+
+  List<DatedStatus> get history => [for (final i in instances) DatedStatus(i.fecha, i.estado)];
 }
 
 /// Duración por defecto de un semestre cuando el usuario todavía no ha definido
@@ -128,12 +133,13 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
           weekly[s.subjectId] = (weekly[s.subjectId] ?? 0) + 1;
         }
 
-        final statuses = <int, List<SessionStatus>>{};
+        final history = <int, List<DatedStatus>>{};
         for (final r in statusRows) {
           final subjectId = r.readTable(classSessions).subjectId;
-          statuses
-              .putIfAbsent(subjectId, () => <SessionStatus>[])
-              .add(r.readTable(sessionInstances).estado);
+          final instance = r.readTable(sessionInstances);
+          history
+              .putIfAbsent(subjectId, () => <DatedStatus>[])
+              .add(DatedStatus(instance.fecha, instance.estado));
         }
 
         final evals = <int, List<Evaluation>>{};
@@ -146,7 +152,7 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
             SubjectOverview(
               subject: s,
               weeklyClasses: weekly[s.id] ?? 0,
-              statuses: statuses[s.id] ?? const <SessionStatus>[],
+              history: history[s.id] ?? const <DatedStatus>[],
               evaluations: evals[s.id] ?? const <Evaluation>[],
             ),
         ];
@@ -176,20 +182,11 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
       ..where(classSessions.subjectId.equals(subjectId))
       ..orderBy([OrderingTerm.desc(sessionInstances.fecha)]);
 
-    final evaluationQuery = select(evaluations)
-      ..where((t) => t.subjectId.equals(subjectId))
-      ..orderBy([
-        (t) => OrderingTerm.asc(t.orden),
-        (t) => OrderingTerm.asc(t.id),
-      ]);
-
-    return combineLatest4<List<Subject>, List<TypedResult>, List<TypedResult>,
-        List<Evaluation>, SubjectDetail?>(
+    return combineLatest3<List<Subject>, List<TypedResult>, List<TypedResult>, SubjectDetail?>(
       subjectQuery.watch(),
       sessionQuery.watch(),
       instanceQuery.watch(),
-      evaluationQuery.watch(),
-      (subjectRows, sessionRows, instanceRows, evaluationRows) {
+      (subjectRows, sessionRows, instanceRows) {
         if (subjectRows.isEmpty) return null;
         return SubjectDetail(
           subject: subjectRows.first,
@@ -203,7 +200,6 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
           instances: [
             for (final r in instanceRows) r.readTable(sessionInstances),
           ],
-          evaluations: evaluationRows,
         );
       },
     );
@@ -216,8 +212,6 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
     required int colorIndex,
     required int limiteFaltas,
     String? profesor,
-    int? creditos,
-    DateTime? fechaLimiteCancelacion,
   }) async {
     final semester = await ensureActiveSemester();
     return into(subjects).insert(
@@ -227,20 +221,18 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
         colorIndex: colorIndex,
         limiteFaltas: Value(limiteFaltas),
         profesor: Value(profesor),
-        creditos: Value(creditos),
-        fechaLimiteCancelacion: Value(fechaLimiteCancelacion),
       ),
     );
   }
 
+  /// Las columnas de créditos y fecha límite de cancelación siguen en la
+  /// tabla (herencia de Cátedra) pero Kairós no las escribe.
   Future<void> updateSubject({
     required int id,
     required String nombre,
     required int colorIndex,
     required int limiteFaltas,
     String? profesor,
-    int? creditos,
-    DateTime? fechaLimiteCancelacion,
   }) {
     return (update(subjects)..where((t) => t.id.equals(id))).write(
       SubjectsCompanion(
@@ -248,8 +240,6 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
         colorIndex: Value(colorIndex),
         limiteFaltas: Value(limiteFaltas),
         profesor: Value(profesor),
-        creditos: Value(creditos),
-        fechaLimiteCancelacion: Value(fechaLimiteCancelacion),
       ),
     );
   }
@@ -385,41 +375,4 @@ class SubjectsDao extends DatabaseAccessor<KairosDatabase> with _$SubjectsDaoMix
       ),
     );
   }
-
-  // ----------------------------------------------------------- evaluación
-
-  Future<void> saveEvaluation({
-    int? id,
-    required int subjectId,
-    required String nombre,
-    required double porcentaje,
-    double? nota,
-    DateTime? fecha,
-    int orden = 0,
-  }) async {
-    if (id == null) {
-      await into(evaluations).insert(
-        EvaluationsCompanion.insert(
-          subjectId: subjectId,
-          nombre: nombre,
-          porcentaje: porcentaje,
-          nota: Value(nota),
-          fecha: Value(fecha),
-          orden: Value(orden),
-        ),
-      );
-      return;
-    }
-    await (update(evaluations)..where((t) => t.id.equals(id))).write(
-      EvaluationsCompanion(
-        nombre: Value(nombre),
-        porcentaje: Value(porcentaje),
-        nota: Value(nota),
-        fecha: Value(fecha),
-      ),
-    );
-  }
-
-  Future<void> deleteEvaluation(int id) =>
-      (delete(evaluations)..where((t) => t.id.equals(id))).go();
 }

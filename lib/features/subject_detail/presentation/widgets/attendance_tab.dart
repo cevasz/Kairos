@@ -6,6 +6,7 @@ import '../../../../core/db/database.dart';
 import '../../../../core/providers.dart';
 import '../../../../core/time/calendar_day.dart';
 import '../../../../domain/attendance/attendance.dart';
+import '../../../../domain/streaks/streaks.dart';
 import '../../../../l10n/strings.g.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../theme/cascade.dart';
@@ -18,9 +19,9 @@ import '../../application/subject_detail_providers.dart';
 import 'absence_ring.dart';
 import 'check_mark.dart';
 
-/// Pestaña Asistencia: el anillo de faltas y el historial de sesiones.
+/// Pestaña Historial: el anillo de saltos, la racha y las sesiones pasadas.
 ///
-/// El número que manda es «cuántas te quedan», no «cuántas llevas»: es la
+/// El número que manda es «cuántos te quedan», no «cuántos llevas»: es la
 /// pregunta que la persona se hace de verdad.
 class AttendanceTab extends ConsumerWidget {
   const AttendanceTab({required this.state, super.key});
@@ -40,7 +41,7 @@ class AttendanceTab extends ConsumerWidget {
     // resto de la pantalla.
     final now = ref.watch(clockProvider).valueOrNull ?? DateTime.now();
 
-    // Solo el historial ya ocurrido: una clase futura todavía no es nada.
+    // Solo el historial ya ocurrido: un bloque futuro todavía no es nada.
     final history = state.detail.instances
         .where((i) =>
             i.estado != SessionStatus.pendiente || !isFutureDay(i.fecha, now: now))
@@ -77,6 +78,8 @@ class AttendanceTab extends ConsumerWidget {
             ),
           ),
         ),
+        SizedBox(height: SpaceTokens.xl),
+        _StreakCard(streak: state.streak),
         SizedBox(height: SpaceTokens.xl),
         Text(
           SAttendance.historyLabel,
@@ -116,6 +119,7 @@ class AttendanceTab extends ConsumerWidget {
               (SessionStatus.asistio, SAttendance.stateAttended),
               (SessionStatus.falto, SAttendance.stateAbsent),
               (SessionStatus.canceladaProfe, SAttendance.stateCancelled),
+              (SessionStatus.justificada, SAttendance.stateJustified),
             ])
               ListTile(
                 title: Text(option.$2),
@@ -141,10 +145,10 @@ class AttendanceTab extends ConsumerWidget {
       return;
     }
 
-    // Háptica ligera: marcar asistencia y marcar cancelación están las dos en
-    // la lista `light` del contrato.
+    // Háptica ligera: marcar hecho y marcar cancelado están los dos en la
+    // lista `light` del contrato.
     Haptics.fire(
-      status == SessionStatus.canceladaProfe
+      status == SessionStatus.canceladaProfe || status == SessionStatus.justificada
           ? 'marcarCancelacion'
           : 'marcarAsistencia',
     );
@@ -162,7 +166,7 @@ class _StatusChoice {
   final SessionStatus? status;
 }
 
-/// La insignia del semáforo: «Mitad del cupo usada», «Una más y pierdes».
+/// La insignia del semáforo: «Mitad de los saltos usada», «Uno más y te pasas».
 ///
 /// Usa [AnimatedContainer] para que el borde de color transite suavemente
 /// cuando el estado del semáforo cambia, en lugar de saltar en un fotograma.
@@ -186,6 +190,66 @@ class _Badge extends StatelessWidget {
         ),
         child: Text(text, style: context.type(TypeTokens.captionS, color: color)),
       );
+}
+
+/// La racha: cuántas semanas seguidas llevas cumpliendo y tu mejor marca.
+class _StreakCard extends StatelessWidget {
+  const _StreakCard({required this.streak});
+
+  final Streak streak;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = Theme.of(context).brightness;
+    final n = streak.current;
+    final lit = n > 0;
+    final title = switch (n) {
+      0 => SAttendance.streakNone,
+      1 => SAttendance.streakCurrentOne,
+      _ => SAttendance.streakCurrent(n: n),
+    };
+    final best = streak.best;
+
+    return Container(
+      padding: EdgeInsets.all(SpaceTokens.cardPadding),
+      decoration: BoxDecoration(
+        color: ColorTokens.surfaceCard.of(b),
+        borderRadius: BorderRadius.circular(RadiusTokens.card),
+        border: Border.all(color: ColorTokens.surfaceBorder.of(b), width: BorderTokens.hairline),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            lit ? Icons.local_fire_department : Icons.local_fire_department_outlined,
+            size: IconTokens.sizeXl,
+            color: lit ? ColorTokens.accentAttention.of(b) : ColorTokens.textTertiary.of(b),
+          ),
+          SizedBox(width: SpaceTokens.m),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: context.type(TypeTokens.titleS)),
+                if (best > n) ...[
+                  SizedBox(height: SpaceTokens.xs / 2),
+                  Text(
+                    best == 1 ? SAttendance.streakBestOne : SAttendance.streakBest(n: best),
+                    style: context.type(TypeTokens.bodyS, color: ColorTokens.textSecondary.of(b)),
+                  ),
+                ],
+                SizedBox(height: SpaceTokens.xs),
+                Text(
+                  SAttendance.streakExplainer,
+                  style: context.type(TypeTokens.captionS, color: ColorTokens.textTertiary.of(b)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _HistoryRow extends StatefulWidget {
@@ -229,9 +293,9 @@ class _HistoryRowState extends State<_HistoryRow> {
       SessionStatus.canceladaProfe =>
         (SAttendance.stateCancelled, ColorTokens.textTertiary.of(b)),
       SessionStatus.justificada =>
-        (SAttendance.stateCancelled, ColorTokens.textTertiary.of(b)),
+        (SAttendance.stateJustified, ColorTokens.textTertiary.of(b)),
       SessionStatus.posibleFalta =>
-        (SAttendance.stateAbsent, ColorTokens.accentAttention.of(b)),
+        (SAttendance.stateMaybeAbsent, ColorTokens.accentAttention.of(b)),
       SessionStatus.pendiente => ('', ColorTokens.textTertiary.of(b)),
     };
 
@@ -260,8 +324,8 @@ class _HistoryRowState extends State<_HistoryRow> {
               ),
               SizedBox(width: SpaceTokens.m),
               Expanded(
-                // Una cancelada se tacha, no se esconde: sigue siendo una clase
-                // que estaba en tu horario. El trazo se dibuja al marcarla.
+                // Un cancelado se tacha, no se esconde: sigue siendo un bloque
+                // que estaba en tu horario. El trazo se dibuja al marcarlo.
                 child: StrikeThrough(
                   struck: cancelled,
                   guard: MotionGuard.of(context),

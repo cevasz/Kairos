@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/db/database.dart';
-import '../../../core/providers.dart';
 import '../../../core/time/minutes_of_day.dart';
 import '../../../l10n/strings.g.dart';
 import '../../../theme/app_theme.dart';
@@ -16,16 +15,15 @@ import '../../subjects/presentation/subject_actions.dart';
 import '../../subjects/presentation/subjects_screen.dart';
 import '../application/subject_detail_providers.dart';
 import 'widgets/attendance_tab.dart';
-import 'widgets/grades_tab.dart';
 import 'widgets/tasks_tab.dart';
 
-/// La pantalla de una materia: Notas y Asistencia.
+/// La pantalla de una actividad: Pendientes e Historial.
 ///
 /// Sin mascota. «detalle de materia» está en la lista de pantallas prohibidas
 /// del contrato: aquí se viene a trabajar, y a veces a recibir malas noticias.
 ///
-/// En teléfono son dos pestañas. En tablet, las dos columnas a la vez: la
-/// pregunta «¿cómo voy?» tiene dos mitades y caben juntas.
+/// En teléfono son dos pestañas. En tablet, las dos columnas a la vez: «qué
+/// me falta» y «cómo voy» caben juntas.
 class SubjectDetailScreen extends ConsumerWidget {
   const SubjectDetailScreen({
     required this.subjectId,
@@ -35,8 +33,8 @@ class SubjectDetailScreen extends ConsumerWidget {
 
   final int subjectId;
 
-  /// `true` cuando vive en el panel derecho de Materias en tablet: sin flecha
-  /// de volver, y si la materia se borra se limpia la selección en vez de
+  /// `true` cuando vive en el panel derecho de Actividades en tablet: sin
+  /// flecha de volver, y si la actividad se borra se limpia la selección en vez de
   /// cerrar una ruta que no existe.
   final bool embedded;
 
@@ -51,7 +49,7 @@ class SubjectDetailScreen extends ConsumerWidget {
         body: MascotError(error: e, onRetry: () => ref.invalidate(subjectDetailProvider(subjectId))),
       ),
       data: (state) {
-        // La materia se borró mientras la pantalla estaba abierta. Se cierra
+        // La actividad se borró mientras la pantalla estaba abierta. Se cierra
         // sola en vez de quedarse enseñando datos que ya no existen.
         if (state == null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -80,7 +78,7 @@ class _Loaded extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final b = Theme.of(context).brightness;
     final subject = state.detail.subject;
-    // Cancelada, la materia pierde su color: sigue ahí, pero ya no es tuya
+    // En pausa, la actividad pierde su color: sigue ahí, pero ya no es tuya
     // esta semana.
     final accent = subject.cancelada ? ColorTokens.surfaceBorder.of(b) : SubjectPalette.at(subject.colorIndex);
     final wide = context.sizeClass.isExpanded;
@@ -122,9 +120,8 @@ class _Loaded extends ConsumerWidget {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: _Pane(label: SGrades.tab, child: GradesTab(state: state))),
-                  Expanded(child: _Pane(label: SAttendance.tab, child: AttendanceTab(state: state))),
                   Expanded(child: _Pane(label: STasks.tab, child: TasksTab(state: state))),
+                  Expanded(child: _Pane(label: SAttendance.tab, child: AttendanceTab(state: state))),
                 ],
               ),
             ),
@@ -134,7 +131,7 @@ class _Loaded extends ConsumerWidget {
     }
 
     return DefaultTabController(
-      length: 3,
+      length: 2,
       child: Scaffold(
         appBar: AppBar(
           title: Text(subject.nombre),
@@ -148,9 +145,8 @@ class _Loaded extends ConsumerWidget {
             unselectedLabelColor: ColorTokens.textTertiary.of(b),
             labelStyle: context.type(TypeTokens.bodyS),
             tabs: const [
-              Tab(text: SGrades.tab),
-              Tab(text: SAttendance.tab),
               Tab(text: STasks.tab),
+              Tab(text: SAttendance.tab),
             ],
           ),
         ),
@@ -160,9 +156,8 @@ class _Loaded extends ConsumerWidget {
             Expanded(
               child: TabBarView(
                 children: [
-                  GradesTab(state: state),
-                  AttendanceTab(state: state),
                   TasksTab(state: state),
+                  AttendanceTab(state: state),
                 ],
               ),
             ),
@@ -197,7 +192,7 @@ class _Pane extends StatelessWidget {
       );
 }
 
-/// Profesor y horario. Es lo que se consulta sin pensar: dónde y con quién.
+/// Con quién y horario. Es lo que se consulta sin pensar: cuándo y con quién.
 class _Header extends ConsumerWidget {
   const _Header({required this.state, required this.accent});
 
@@ -208,7 +203,8 @@ class _Header extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final b = Theme.of(context).brightness;
     final subject = state.detail.subject;
-    final today = ref.watch(todayProvider);
+    final profesor = subject.profesor;
+    final hasSessions = state.detail.sessions.isNotEmpty;
 
     return Container(
       width: double.infinity,
@@ -236,12 +232,13 @@ class _Header extends ConsumerWidget {
             _CancelledBanner(subject: subject),
             SizedBox(height: SpaceTokens.m),
           ],
-          Text(
-            subject.profesor ?? SSubjectDetail.noProfessor,
-            style: context.type(TypeTokens.bodyS),
-          ),
-          if (state.detail.sessions.isNotEmpty) ...[
-            SizedBox(height: SpaceTokens.xs),
+          if (profesor != null)
+            Text(
+              SSubjectDetail.withWhom(nombre: profesor),
+              style: context.type(TypeTokens.bodyS),
+            ),
+          if (hasSessions) ...[
+            if (profesor != null) SizedBox(height: SpaceTokens.xs),
             Text(
               state.detail.sessions
                   .map((s) => SSessionForm.summary(
@@ -256,41 +253,18 @@ class _Header extends ConsumerWidget {
               ),
             ),
           ],
-          // La fecha límite para cancelar la materia es un dato que se
-          // necesita antes de llegar a la calculadora, no solo dentro de ella.
-          if (subject.fechaLimiteCancelacion != null && !subject.cancelada) ...[
-            SizedBox(height: SpaceTokens.s),
+          if (!hasSessions && profesor == null)
             Text(
-              SCalculator.withdrawDeadline(
-                fecha: DateFormat("d 'de' MMMM", 'es_CO')
-                    .format(subject.fechaLimiteCancelacion!),
-              ),
-              style: context.type(
-                TypeTokens.captionS,
-                color: ColorTokens.accentAttention.of(b),
-              ),
-            ),
-            SizedBox(height: SpaceTokens.xs),
-            // La cuenta regresiva es lo que la fecha sola no dice.
-            Text(
-              _deadlineCountdown(subject.fechaLimiteCancelacion!, today),
+              SSubjects.noSchedule,
               style: context.type(TypeTokens.captionS, color: ColorTokens.textTertiary.of(b)),
             ),
-          ],
         ],
       ),
     );
   }
 }
 
-String _deadlineCountdown(DateTime deadline, DateTime today) {
-  final days = DateTime(deadline.year, deadline.month, deadline.day).difference(today).inDays;
-  if (days < 0) return SSubjectCancel.deadlinePassed;
-  if (days == 0) return SSubjectCancel.deadlineToday;
-  return SSubjectCancel.deadlineIn(n: days);
-}
-
-/// «Cancelaste esta materia» con la fecha y la salida para reactivarla.
+/// «Esta actividad está en pausa» con la fecha y la salida para reanudarla.
 class _CancelledBanner extends ConsumerWidget {
   const _CancelledBanner({required this.subject});
   final Subject subject;

@@ -5,8 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/daos/schedule_dao.dart';
-import '../../../../core/db/database.dart';
-import '../../../../core/format/numbers.dart';
+import '../../../../core/db/daos/tasks_dao.dart';
 import '../../../../core/providers.dart';
 import '../../../../domain/attendance/attendance.dart';
 import '../../../../l10n/strings.g.dart';
@@ -16,12 +15,13 @@ import '../../../../theme/tokens.g.dart';
 import '../../../mascot/application/mascot_voice.dart';
 import '../../../subject_detail/presentation/subject_detail_screen.dart';
 import '../../../subjects/application/subjects_providers.dart';
+import '../../../tasks/application/tasks_providers.dart';
 
 /// Destino del hero desde el bloque semanal. Sin mascota: es pantalla de
 /// trabajo, y la lista de prohibidas la incluye explícitamente.
 ///
-/// Además de las acciones, contesta las tres preguntas del prototipo (C2):
-/// cuántas faltas llevas, cómo vas de nota y cuál es la próxima evaluación.
+/// Además de las acciones, contesta tres preguntas: cuántos saltos llevas,
+/// cuántas semanas vas cumpliendo y qué tienes pendiente.
 class SubjectSheet extends ConsumerWidget {
   const SubjectSheet({required this.item, this.heroTag, super.key});
 
@@ -124,12 +124,14 @@ class SubjectSheet extends ConsumerWidget {
         SessionStatus.asistio => SAttendance.stateAttended,
         SessionStatus.falto => SAttendance.stateAbsent,
         SessionStatus.canceladaProfe => SAttendance.stateCancelled,
-        _ => SAttendance.stateAttended,
+        SessionStatus.justificada => SAttendance.stateJustified,
+        SessionStatus.posibleFalta => SAttendance.stateMaybeAbsent,
+        SessionStatus.pendiente => SAttendance.stateAttended,
       };
 
   /// Marcar cancelación y marcar falta comparten la háptica ligera del
   /// contrato; ninguna de las dos es destructiva, las dos son reversibles desde
-  /// el historial de la materia.
+  /// el historial de la actividad.
   Future<void> _mark(
     BuildContext context,
     WidgetRef ref,
@@ -151,18 +153,23 @@ class SubjectSheet extends ConsumerWidget {
   }
 }
 
-/// Tres cifras en fila: faltas, acumulada y próxima evaluación. Es la misma
-/// información que la tarjeta de Materias, con la evaluación añadida porque
-/// desde el horario la pregunta suele ser «¿qué me toca entregar?».
-class _Stats extends StatelessWidget {
+/// Tres cifras en fila: saltos, racha y el próximo pendiente. Es la misma
+/// información que la tarjeta de Actividades, con el pendiente añadido porque
+/// desde el horario la pregunta suele ser «¿qué tengo que llevar?».
+class _Stats extends ConsumerWidget {
   const _Stats({required this.card});
   final SubjectCard card;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final b = Theme.of(context).brightness;
     final semaphore = SemaphoreTokens.color[card.tally.state]!.of(b);
-    final next = _nextEvaluation(card);
+    // El DAO ya los ordena por fecha: el primero de esta actividad es el que
+    // viene.
+    final next = (ref.watch(pendingProvider).valueOrNull ?? const <PendingItem>[])
+        .where((p) => p.subject.id == card.subject.id)
+        .firstOrNull;
+    final streak = card.streak.current;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -177,37 +184,27 @@ class _Stats extends StatelessWidget {
         ),
         Expanded(
           child: _Stat(
-            label: SSubjectSheet.accumulated,
-            value: card.hasGrades ? Numbers.grade(card.grades.accumulated) : '—',
-            detail: card.hasGrades ? SGrades.outOf : SSubjects.gradeNone,
+            label: SSubjectSheet.streak,
+            value: '$streak',
+            detail: streak == 1 ? SSubjectSheet.streakWeek : SSubjectSheet.streakWeeks,
             color: ColorTokens.textPrimary.of(b),
           ),
         ),
         Expanded(
           child: _Stat(
-            label: SSubjectSheet.nextEval,
-            value: next?.nombre ?? '—',
-            detail: next?.fecha == null
-                ? (next == null ? SGrades.pending : '${Numbers.percent(next.porcentaje)} %')
-                : DateFormat('d MMM', 'es_CO').format(next!.fecha!).replaceAll('.', ''),
+            label: SSubjectSheet.nextTask,
+            value: next?.titulo ?? SSubjectSheet.nextTaskNone,
+            detail: next == null
+                ? ''
+                : next.fecha == null
+                    ? STasks.noDue
+                    : DateFormat('d MMM', 'es_CO').format(next.fecha!).replaceAll('.', ''),
             color: ColorTokens.textPrimary.of(b),
             valueStyle: TypeTokens.bodyS,
           ),
         ),
       ],
     );
-  }
-
-  /// La primera sin nota, por fecha si la tiene y por orden si no.
-  static Evaluation? _nextEvaluation(SubjectCard card) {
-    final pending = card.evaluations.where((e) => e.nota == null).toList()
-      ..sort((a, b) {
-        if (a.fecha != null && b.fecha != null) return a.fecha!.compareTo(b.fecha!);
-        if (a.fecha != null) return -1;
-        if (b.fecha != null) return 1;
-        return a.orden.compareTo(b.orden);
-      });
-    return pending.firstOrNull;
   }
 }
 

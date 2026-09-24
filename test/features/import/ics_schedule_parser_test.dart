@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:kairos/core/time/minutes_of_day.dart';
-import 'package:kairos/domain/import/schedule_parser.dart';
+import 'package:kairos/domain/import/parsed_schedule.dart';
 import 'package:kairos/features/import/data/ics_schedule_parser.dart';
 import 'package:flutter_test/flutter_test.dart';
 

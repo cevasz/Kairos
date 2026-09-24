@@ -6,10 +6,10 @@ import '../../../theme/layout.dart';
 import '../../../theme/tokens.g.dart';
 import '../../mascot/mascot_view.dart';
 import '../../subjects/presentation/subjects_screen.dart';
-import 'import_pdf_screen.dart';
+import 'import_screen.dart';
 
 /// A1: la bienvenida. Es la pantalla de inicio mientras no haya ninguna
-/// materia; en cuanto existe una, la app arranca en el shell.
+/// actividad; en cuanto existe una, la app arranca en el shell.
 ///
 /// No hay «saltar»: sin datos no hay nada que enseñar detrás, y las dos
 /// salidas de aquí son justamente las dos formas de meter datos.
@@ -63,7 +63,7 @@ class OnboardingScreen extends StatelessWidget {
                     ),
                     const Spacer(),
                     FilledButton(
-                      onPressed: () => openImportPdf(context),
+                      onPressed: () => openImport(context),
                       child: const Text(SOnboarding.ctaImport),
                     ),
                     SizedBox(height: SpaceTokens.s),

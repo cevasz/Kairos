@@ -187,8 +187,6 @@ Future<void> _push(Ref ref) async {
       'pendingHeader': SWidgets.pendingHeader,
       'pendingNone': SWidgets.pendingNone,
       'pendingCount': SWidgets.pendingCount(n: '%d'),
-      'pendingEval': SWidgets.pendingEval,
-      'pendingTask': SWidgets.pendingTask,
     },
     // Lo que dice Erizógenes en los widgets grandes, por situación. Kotlin
     // escoge una variante según la hora para que no repita siempre la misma.
@@ -206,7 +204,6 @@ Future<void> _push(Ref ref) async {
           'title': item.titulo,
           'when': pendingDay(item.fecha),
           'date': item.fecha == null ? null : dateKey.format(item.fecha!),
-          'kind': item.isEvaluation ? 'eval' : 'task',
         },
     ],
     'pendingTotal': pending.length,

@@ -182,7 +182,7 @@ class _Loaded extends ConsumerWidget {
   }
 }
 
-/// Alarmas en el Reloj del teléfono y avisos de evaluación.
+/// Alarmas en el Reloj del teléfono y avisos de la víspera de pendientes.
 ///
 /// Las del Reloj se crean al tocar el botón, no solas: el Reloj no deja que
 /// otra app borre alarmas, así que crearlas a espaldas de la persona cada vez
@@ -216,7 +216,7 @@ class _AlarmsCardState extends ConsumerState<_AlarmsCard> {
     }
   }
 
-  Future<void> _toggleEvals(bool on) async {
+  Future<void> _togglePendingReminders(bool on) async {
     await ref.read(settingsDaoProvider).setEvalAlarm(on);
     if (on) await ref.read(alarmChannelProvider).requestNotifications();
   }
@@ -264,9 +264,9 @@ class _AlarmsCardState extends ConsumerState<_AlarmsCard> {
         ),
         SizedBox(height: SpaceTokens.m),
         _Row(
-          title: SAlarms.evals,
-          subtitle: SAlarms.evalsDesc(hora: reminderLabel(s.avisoEvaluacionMin)),
-          trailing: Switch(value: s.alarmaEvaluaciones, onChanged: _toggleEvals),
+          title: SAlarms.pending,
+          subtitle: SAlarms.pendingDesc(hora: reminderLabel(s.avisoEvaluacionMin)),
+          trailing: Switch(value: s.alarmaEvaluaciones, onChanged: _togglePendingReminders),
         ),
         if (s.alarmaEvaluaciones)
           Align(
@@ -274,7 +274,7 @@ class _AlarmsCardState extends ConsumerState<_AlarmsCard> {
             child: TextButton.icon(
               onPressed: _pickReminderTime,
               icon: const Icon(Icons.schedule),
-              label: Text('${SAlarms.evalHourLabel}: ${reminderLabel(s.avisoEvaluacionMin)}'),
+              label: Text('${SAlarms.pendingHourLabel}: ${reminderLabel(s.avisoEvaluacionMin)}'),
             ),
           ),
         SizedBox(height: SpaceTokens.l),
@@ -459,7 +459,7 @@ class _UpdatesCard extends ConsumerWidget {
   }
 }
 
-/// Dónde está la casa y si Kairós anota la falta cuando sigues en ella
+/// Dónde está la casa y si Kairós marca «Saltado» cuando sigues en ella
 /// pasada la tolerancia. La ubicación de casa solo vive en el teléfono.
 class _HomeCheckCard extends ConsumerStatefulWidget {
   const _HomeCheckCard({required this.settings});

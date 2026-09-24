@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import '../../../core/time/minutes_of_day.dart';
-import '../../../domain/import/schedule_parser.dart';
+import '../../../domain/import/parsed_schedule.dart';
 
 /// Horarios que llegan como calendario (.ics): lo que exportan Google
 /// Calendar, Outlook/Teams, Moodle y varios portales académicos (§50).

@@ -33,10 +33,6 @@ const _exemptions = <String, String>{
   // son la ilustración misma, y no hay token que las pueda nombrar.
   'lib/features/mascot/mascot_view.dart':
       'CustomPainter: geometría de la ilustración, no medidas de UI',
-  // Habla con la API por HTTP. Su única duración es el tiempo de espera de
-  // red, que no es movimiento y no tiene por qué estar en el contrato visual.
-  'lib/features/import/data/claude_schedule_parser.dart':
-      'Cliente HTTP: el timeout de red no es una animación',
   // Escribe los datos de los widgets nativos. Su única duración es la espera
   // para agrupar escrituras seguidas, que tampoco es movimiento.
   'lib/features/widgets/home_widget_sync.dart':

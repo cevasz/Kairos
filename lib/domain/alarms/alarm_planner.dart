@@ -67,9 +67,9 @@ bool _sameDays(List<int> a, List<int> b) {
   return true;
 }
 
-/// Una evaluación con fecha, para el aviso de la víspera.
-class DatedEvaluation {
-  const DatedEvaluation({required this.id, required this.name, required this.subject, required this.date});
+/// Un pendiente con fecha, para el aviso de la víspera.
+class DatedPending {
+  const DatedPending({required this.id, required this.name, required this.subject, required this.date});
 
   final int id;
   final String name;
@@ -77,11 +77,11 @@ class DatedEvaluation {
   final DateTime date;
 }
 
-/// El aviso de la víspera de una evaluación: fecha y hora exactas.
-class EvaluationReminder {
-  const EvaluationReminder({required this.evaluation, required this.at});
+/// El aviso de la víspera de un pendiente: fecha y hora exactas.
+class PendingReminder {
+  const PendingReminder({required this.pending, required this.at});
 
-  final DatedEvaluation evaluation;
+  final DatedPending pending;
   final DateTime at;
 }
 
@@ -162,15 +162,15 @@ abstract final class AlarmPlanner {
 
   /// Avisos de la víspera a [reminderMinute] (minutos desde medianoche).
   /// Solo los que todavía no pasaron respecto de [now].
-  static List<EvaluationReminder> evaluationReminders({
-    required List<DatedEvaluation> evaluations,
+  static List<PendingReminder> pendingReminders({
+    required List<DatedPending> pending,
     required int reminderMinute,
     required DateTime now,
   }) {
-    final out = <EvaluationReminder>[];
-    for (final e in evaluations) {
+    final out = <PendingReminder>[];
+    for (final e in pending) {
       final eve = DateTime(e.date.year, e.date.month, e.date.day - 1).add(Duration(minutes: reminderMinute));
-      if (eve.isAfter(now)) out.add(EvaluationReminder(evaluation: e, at: eve));
+      if (eve.isAfter(now)) out.add(PendingReminder(pending: e, at: eve));
     }
     out.sort((a, b) => a.at.compareTo(b.at));
     return out;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../domain/import/schedule_parser.dart';
+import '../../../domain/import/parsed_schedule.dart';
 import '../../../l10n/strings.g.dart';
 import '../../../theme/accent_card.dart';
 import '../../../theme/app_theme.dart';
@@ -14,35 +14,34 @@ import '../../mascot/mascot_loader.dart';
 import '../../mascot/mascot_view.dart';
 import '../../subjects/presentation/subjects_screen.dart';
 import '../application/import_controller.dart';
-import '../data/claude_schedule_parser.dart';
 import 'widgets/parsed_session_sheet.dart';
 
-/// Importar horario: A2 selector → A3 parseo → A4 confirmación, o A5 error.
+/// Importar calendario: elegir el .ics → leerlo → revisar, o el error.
 ///
 /// Una sola ruta con cuatro vistas: el estado del controlador decide cuál se
 /// ve y el `StateSwitcher` hace el cruce. Así «Probar con otro archivo» o
 /// «Cancelar» no apilan pantallas.
-class ImportPdfScreen extends ConsumerWidget {
-  const ImportPdfScreen({super.key});
+class ImportScreen extends ConsumerWidget {
+  const ImportScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(importControllerProvider);
 
-    // Guardado: se vuelve a la pantalla anterior. Las materias ya están en la
-    // base y la lista las enseña sola.
+    // Guardado: se vuelve a la pantalla anterior. Las actividades ya están en
+    // la base y la lista las enseña sola.
     //
     // `pop`, no `maybePop`: este aviso llega antes de redibujar, cuando el
     // `PopScope` todavía tiene el `canPop: false` de «guardando». `maybePop` le
     // hacía caso, no cerraba, y la pantalla se quedaba girando con todo ya
-    // guardado. Siempre se abre con `openImportPdf`, así que hay a dónde volver.
+    // guardado. Siempre se abre con `openImport`, así que hay a dónde volver.
     ref.listen(importControllerProvider, (_, next) {
       if (next is ImportDone) Navigator.of(context).pop();
     });
 
     final title = switch (state) {
-      ImportReview() => SPdfConfirm.title,
-      _ => SPdfPicker.title,
+      ImportReview() => SImportConfirm.title,
+      _ => SImportPicker.title,
     };
 
     return PopScope(
@@ -56,8 +55,7 @@ class ImportPdfScreen extends ConsumerWidget {
               key: ValueKey(state.runtimeType),
               child: switch (state) {
                 ImportIdle() => const _PickerView(),
-                ImportExtracting(:final fileName) => _ParsingView(fileName: fileName),
-                ImportParsing() => _ParsingView(fileName: state.fileName, parsing: state),
+                ImportParsing() => _ParsingView(parsing: state),
                 ImportReview() => _ReviewView(review: state),
                 ImportSaving() || ImportDone() => const MascotLoader(),
                 ImportFailed(:final reason) => _ErrorView(reason: reason),
@@ -70,11 +68,11 @@ class ImportPdfScreen extends ConsumerWidget {
   }
 }
 
-Future<void> openImportPdf(BuildContext context) => Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const ImportPdfScreen()),
+Future<void> openImport(BuildContext context) => Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const ImportScreen()),
     );
 
-// ─────────────────────────────────────────────────────────────── A2
+// ─────────────────────────────────────────────────────────────── elegir
 
 class _PickerView extends ConsumerWidget {
   const _PickerView();
@@ -107,27 +105,21 @@ class _PickerView extends ConsumerWidget {
               child: Column(
                 children: [
                   Icon(
-                    Icons.picture_as_pdf_outlined,
+                    Icons.event_available_outlined,
                     size: IconTokens.sizeXl * 2,
                     color: ColorTokens.accentPrimary.of(b),
                   ),
                   SizedBox(height: SpaceTokens.l),
                   Text(
-                    SPdfPicker.dropzone,
+                    SImportPicker.dropzone,
                     textAlign: TextAlign.center,
                     style: context.type(TypeTokens.titleS),
                   ),
                   SizedBox(height: SpaceTokens.s),
                   Text(
-                    SPdfPicker.hint,
+                    SImportPicker.hint,
                     textAlign: TextAlign.center,
                     style: context.type(TypeTokens.bodyM, color: ColorTokens.textSecondary.of(b)),
-                  ),
-                  SizedBox(height: SpaceTokens.xs),
-                  Text(
-                    SPdfPicker.otherFormats,
-                    textAlign: TextAlign.center,
-                    style: context.type(TypeTokens.captionS, color: ColorTokens.textTertiary.of(b)),
                   ),
                 ],
               ),
@@ -138,13 +130,11 @@ class _PickerView extends ConsumerWidget {
         FilledButton.icon(
           onPressed: pick,
           icon: const Icon(Icons.folder_open_outlined),
-          label: const Text(SPdfPicker.browse),
+          label: const Text(SImportPicker.browse),
         ),
         SizedBox(height: SpaceTokens.xl),
         Text(
-          // El pie dice la verdad según haya clave o no: sin clave nada sale
-          // del teléfono; con clave, el texto va a la API y el archivo no.
-          ClaudeScheduleParser.isConfigured ? SPdfPicker.footerApi : SPdfPicker.footer,
+          SImportPicker.footer,
           textAlign: TextAlign.center,
           style: context.type(TypeTokens.captionS, color: ColorTokens.textTertiary.of(b)),
         ),
@@ -153,26 +143,20 @@ class _PickerView extends ConsumerWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────── A3
+// ─────────────────────────────────────────────────────────────── leer
 
 class _ParsingView extends ConsumerWidget {
-  const _ParsingView({required this.fileName, this.parsing});
+  const _ParsingView({required this.parsing});
 
-  final String fileName;
-  final ImportParsing? parsing;
+  final ImportParsing parsing;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final b = Theme.of(context).brightness;
     final guard = MotionGuard.of(context);
     final p = parsing;
-    final found = p?.found ?? const <ParsedClass>[];
-
-    final progress = p == null
-        ? fileName
-        : p.refining
-            ? SPdfParsing.refining
-            : SPdfParsing.progress(done: p.done, total: p.total);
+    final found = p.found;
+    final progress = SImportParsing.progress(done: p.done, total: p.total);
 
     return Column(
       children: [
@@ -209,13 +193,13 @@ class _ParsingView extends ConsumerWidget {
               ),
               SizedBox(height: SpaceTokens.m),
               LinearProgressIndicator(
-                value: p == null || p.refining || p.total == 0 ? null : p.done / p.total,
+                value: p.total == 0 ? null : p.done / p.total,
                 minHeight: BorderTokens.tabIndicator,
                 backgroundColor: ColorTokens.surfaceRaised.of(b),
                 color: ColorTokens.accentPrimary.of(b),
               ),
               SizedBox(height: SpaceTokens.xl),
-              // Las filas entran en cascada con el escalonado del PDF, que es
+              // Las filas entran en cascada con el escalonado del importador,
               // el doble de lento que el de la timeline: aquí sí hay tiempo.
               for (var i = 0; i < found.length; i++)
                 CascadeIn(
@@ -236,26 +220,9 @@ class _ParsingView extends ConsumerWidget {
           top: false,
           child: Padding(
             padding: EdgeInsets.all(SpaceTokens.screenMargin),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: ref.read(importControllerProvider.notifier).cancel,
-                    child: const Text(SPdfParsing.cancel),
-                  ),
-                ),
-                // Mientras Claude ordena, lo encontrado ya se puede revisar:
-                // nadie tiene que quedarse mirando una barra indeterminada.
-                if (p != null && p.refining) ...[
-                  SizedBox(width: SpaceTokens.m),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: ref.read(importControllerProvider.notifier).skipRefining,
-                      child: const Text(SPdfParsing.skipRefine),
-                    ),
-                  ),
-                ],
-              ],
+            child: OutlinedButton(
+              onPressed: ref.read(importControllerProvider.notifier).cancel,
+              child: const Text(SImportParsing.cancel),
             ),
           ),
         ),
@@ -285,7 +252,7 @@ class _FoundRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            item.nombre.isEmpty ? SPdfConfirm.lowConfidenceBadge : item.nombre,
+            item.nombre.isEmpty ? SImportConfirm.lowConfidenceBadge : item.nombre,
             style: context.type(
               TypeTokens.bodyS,
               color: item.nombre.isEmpty ? ColorTokens.accentAttention.of(b) : null,
@@ -312,7 +279,7 @@ String sessionLabel(ParsedSession s) {
   return SSessionForm.summary(dia: dia, inicio: s.inicio.hhmm, fin: s.fin.hhmm);
 }
 
-// ─────────────────────────────────────────────────────────────── A4
+// ─────────────────────────────────────────────────────────────── revisar
 
 class _ReviewView extends ConsumerWidget {
   const _ReviewView({required this.review});
@@ -324,17 +291,17 @@ class _ReviewView extends ConsumerWidget {
     final ctrl = ref.read(importControllerProvider.notifier);
     final doubts = review.doubtCount;
     final subtitle = switch (doubts) {
-      0 => SPdfConfirm.subtitleNone,
-      1 => SPdfConfirm.subtitleOne,
-      2 => SPdfConfirm.subtitle,
-      _ => SPdfConfirm.subtitleMany(n: doubts),
+      0 => SImportConfirm.subtitleNone,
+      1 => SImportConfirm.subtitleOne,
+      2 => SImportConfirm.subtitle,
+      _ => SImportConfirm.subtitleMany(n: doubts),
     };
     final n = review.sessionCount;
     final confirmLabel = !review.canConfirm && n == 0
-        ? SPdfConfirm.confirmNone
+        ? SImportConfirm.confirmNone
         : n == 1
-            ? SPdfConfirm.confirmOne
-            : SPdfConfirm.confirm(n: n);
+            ? SImportConfirm.confirmOne
+            : SImportConfirm.confirm(n: n);
 
     return Column(
       children: [
@@ -358,7 +325,7 @@ class _ReviewView extends ConsumerWidget {
               OutlinedButton.icon(
                 onPressed: () => openSubjectForm(context),
                 icon: const Icon(Icons.add),
-                label: const Text(SPdfConfirm.addManual),
+                label: const Text(SImportConfirm.addManual),
               ),
               SizedBox(height: SpaceTokens.xxxl),
             ],
@@ -379,8 +346,8 @@ class _ReviewView extends ConsumerWidget {
   }
 }
 
-/// Una materia detectada, editable en sitio. Los campos son los del
-/// formulario de materia; el horario se toca por chip.
+/// Una actividad leída, editable en sitio. Los campos son los del
+/// formulario de actividad; el horario se toca por chip.
 class _ClassCard extends ConsumerWidget {
   const _ClassCard({required this.index, required this.item, super.key});
 
@@ -403,7 +370,7 @@ class _ClassCard extends ConsumerWidget {
           if (item.isLowConfidence) ...[
             Row(
               children: [
-                _Badge(text: SPdfConfirm.lowConfidenceBadge, color: attention),
+                _Badge(text: SImportConfirm.lowConfidenceBadge, color: attention),
                 SizedBox(width: SpaceTokens.s),
                 Expanded(
                   child: Text(
@@ -435,7 +402,7 @@ class _ClassCard extends ConsumerWidget {
                   style: context.type(TypeTokens.bodyM),
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
-                    labelText: SPdfConfirm.fieldProfesor,
+                    labelText: SImportConfirm.fieldProfesor,
                     hintText: SSubjectForm.hintProfesor,
                   ),
                   onChanged: (v) => ctrl.setProfesor(index, v),
@@ -447,7 +414,7 @@ class _ClassCard extends ConsumerWidget {
                   initialValue: item.salon ?? '',
                   style: context.type(TypeTokens.bodyM),
                   decoration: const InputDecoration(
-                    labelText: SPdfConfirm.fieldSalon,
+                    labelText: SImportConfirm.fieldSalon,
                     hintText: SSessionForm.hintSalon,
                   ),
                   onChanged: (v) => ctrl.setSalon(index, v),
@@ -457,7 +424,7 @@ class _ClassCard extends ConsumerWidget {
           ),
           SizedBox(height: SpaceTokens.l),
           Text(
-            SPdfConfirm.fieldDiasHora,
+            SImportConfirm.fieldDiasHora,
             style: context.type(TypeTokens.label, color: ColorTokens.textTertiary.of(b)),
           ),
           SizedBox(height: SpaceTokens.s),
@@ -467,7 +434,7 @@ class _ClassCard extends ConsumerWidget {
             children: [
               if (item.sessions.isEmpty)
                 Text(
-                  SPdfConfirm.sessionsNone,
+                  SImportConfirm.sessionsNone,
                   style: context.type(TypeTokens.captionS, color: ColorTokens.textTertiary.of(b)),
                 ),
               for (var j = 0; j < item.sessions.length; j++)
@@ -484,7 +451,7 @@ class _ClassCard extends ConsumerWidget {
             child: TextButton(
               onPressed: () => ctrl.removeClass(index),
               child: Text(
-                SPdfConfirm.removeClass,
+                SImportConfirm.removeClass,
                 style: context.type(TypeTokens.captionS, color: ColorTokens.textTertiary.of(b)),
               ),
             ),
@@ -508,10 +475,9 @@ class _ClassCard extends ConsumerWidget {
   }
 
   static String _doubtText(ParseDoubt d) => switch (d) {
-        ParseDoubt.missingName => SPdfConfirm.doubtName,
-        ParseDoubt.missingDays => SPdfConfirm.doubtDays,
-        ParseDoubt.badRange => SPdfConfirm.doubtRange,
-        ParseDoubt.nameFromPreviousLine => SPdfConfirm.doubtNamePrev,
+        ParseDoubt.missingName => SImportConfirm.doubtName,
+        ParseDoubt.missingDays => SImportConfirm.doubtDays,
+        ParseDoubt.badRange => SImportConfirm.doubtRange,
       };
 }
 
@@ -571,7 +537,7 @@ class _AddChip extends StatelessWidget {
           children: [
             Icon(Icons.add, size: IconTokens.sizeXs, color: color),
             SizedBox(width: SpaceTokens.xs),
-            Text(SPdfConfirm.addSession, style: context.type(TypeTokens.captionS, color: color)),
+            Text(SImportConfirm.addSession, style: context.type(TypeTokens.captionS, color: color)),
           ],
         ),
       ),
@@ -598,7 +564,7 @@ class _Badge extends StatelessWidget {
       );
 }
 
-// ─────────────────────────────────────────────────────────────── A5
+// ─────────────────────────────────────────────────────────────── error
 
 class _ErrorView extends ConsumerWidget {
   const _ErrorView({required this.reason});
@@ -608,10 +574,10 @@ class _ErrorView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final b = Theme.of(context).brightness;
     final body = switch (reason) {
-      ImportFailure.noText => SPdfError.body,
-      ImportFailure.unreadable => SPdfError.bodyUnreadable,
-      ImportFailure.nothingFound => SPdfError.bodyNothingFound,
-      ImportFailure.saveFailed => SPdfError.bodySaveFailed,
+      ImportFailure.notCalendar => SImportError.bodyNotCalendar,
+      ImportFailure.unreadable => SImportError.bodyUnreadable,
+      ImportFailure.nothingFound => SImportError.bodyNothingFound,
+      ImportFailure.saveFailed => SImportError.bodySaveFailed,
     };
 
     return ListView(
@@ -629,7 +595,7 @@ class _ErrorView extends ConsumerWidget {
         ),
         SizedBox(height: SpaceTokens.xl),
         Text(
-          SPdfError.mascotLine,
+          SImportError.mascotLine,
           textAlign: TextAlign.center,
           style: context.type(TypeTokens.titleM),
         ),
@@ -645,16 +611,16 @@ class _ErrorView extends ConsumerWidget {
             await openSubjectForm(context);
             if (context.mounted) Navigator.of(context).maybePop();
           },
-          child: const Text(SPdfError.ctaManual),
+          child: const Text(SImportError.ctaManual),
         ),
         SizedBox(height: SpaceTokens.s),
         OutlinedButton(
           onPressed: ref.read(importControllerProvider.notifier).reset,
-          child: const Text(SPdfError.ctaRetry),
+          child: const Text(SImportError.ctaRetry),
         ),
         SizedBox(height: SpaceTokens.xl),
         Text(
-          SPdfError.footer,
+          SImportError.footer,
           textAlign: TextAlign.center,
           style: context.type(TypeTokens.captionS, color: ColorTokens.textTertiary.of(b)),
         ),

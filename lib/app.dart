@@ -23,7 +23,7 @@ class KairosApp extends ConsumerWidget {
     // Los widgets de la pantalla de inicio se alimentan solos desde aquí.
     ref.watch(homeWidgetSyncProvider);
     // Y los avisos de la víspera de cada evaluación.
-    ref.watch(evalRemindersSyncProvider);
+    ref.watch(pendingRemindersSyncProvider);
     // Y «¿sigues en casa?»: programar las comprobaciones y aplicar lo que
     // Android decidió con la app cerrada.
     ref.watch(homeCheckSyncProvider);

@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:kairos/features/import/application/import_controller.dart';
-import 'package:kairos/features/import/presentation/import_pdf_screen.dart';
+import 'package:kairos/features/import/presentation/import_screen.dart';
 import 'package:kairos/features/mascot/mascot_loader.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,7 +37,7 @@ void main() {
           home: Builder(
             builder: (context) => Scaffold(
               body: TextButton(
-                onPressed: () => openImportPdf(context),
+                onPressed: () => openImport(context),
                 child: const Text('abrir'),
               ),
             ),
@@ -47,7 +47,7 @@ void main() {
     );
     await tester.tap(find.text('abrir'));
     await tester.pumpAndSettle();
-    expect(find.byType(ImportPdfScreen), findsOneWidget);
+    expect(find.byType(ImportScreen), findsOneWidget);
 
     // En el teléfono el guardado dura varios frames: la pantalla alcanza a
     // pintarse en «guardando» antes de que llegue `ImportDone`.
@@ -62,7 +62,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     }
 
-    expect(find.byType(ImportPdfScreen), findsNothing);
+    expect(find.byType(ImportScreen), findsNothing);
     expect(find.text('abrir'), findsOneWidget);
   });
 }

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/database.dart';
 import '../../../../core/providers.dart';
-import '../../../../domain/grades/grades.dart' as domain;
 import '../../../../l10n/strings.g.dart';
 import '../../../../theme/app_theme.dart';
 import '../../../../theme/haptics.dart';
@@ -16,8 +15,8 @@ import '../../../tasks/application/tasks_providers.dart';
 import '../../application/subject_detail_providers.dart';
 import 'check_mark.dart';
 
-/// Pendientes de una materia: las evaluaciones sin nota que vienen (de solo
-/// lectura, se editan en Notas) y las tareas propias, que se tachan.
+/// Pendientes de una actividad: lo que hay que hacer o llevar, con fecha si
+/// la tiene. Se tachan al hacerlos.
 class TasksTab extends ConsumerWidget {
   const TasksTab({required this.state, super.key});
 
@@ -28,10 +27,6 @@ class TasksTab extends ConsumerWidget {
     final subjectId = state.detail.subject.id;
     final tasks = ref.watch(subjectTasksProvider(subjectId)).valueOrNull ?? const <Task>[];
     final today = ref.watch(todayProvider);
-    final evals = state.evaluations
-        .where((e) => !e.isGraded && e.date != null && !_day(e.date!).isBefore(today))
-        .toList()
-      ..sort((a, b) => a.date!.compareTo(b.date!));
 
     final add = FilledButton.icon(
       onPressed: () => showTaskFormSheet(context, subjectId: subjectId),
@@ -47,7 +42,7 @@ class TasksTab extends ConsumerWidget {
         SpaceTokens.xxxl,
       ),
       children: [
-        if (evals.isEmpty && tasks.isEmpty) ...[
+        if (tasks.isEmpty) ...[
           SizedBox(height: SpaceTokens.xl),
           Text(
             STasks.empty,
@@ -56,13 +51,7 @@ class TasksTab extends ConsumerWidget {
           ),
           SizedBox(height: SpaceTokens.xl),
         ],
-        if (evals.isNotEmpty) ...[
-          _SectionLabel(STasks.evalSection),
-          for (final e in evals) _EvalRow(evaluation: e, today: today),
-          SizedBox(height: SpaceTokens.l),
-        ],
         if (tasks.isNotEmpty) ...[
-          _SectionLabel(STasks.taskSection),
           for (final t in tasks) _TaskRow(key: ValueKey(t.id), task: t, today: today),
           SizedBox(height: SpaceTokens.l),
         ],
@@ -80,47 +69,6 @@ String dueLabel(DateTime due, DateTime today) {
   if (d == today) return STasks.dueToday;
   if (d == today.add(const Duration(days: 1))) return STasks.dueTomorrow;
   return STasks.due(dia: DateFormat('EEE d MMM', 'es_CO').format(d));
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-        padding: EdgeInsets.only(bottom: SpaceTokens.s),
-        child: Text(
-          text,
-          style: context.type(TypeTokens.label, color: context.themed(ColorTokens.textTertiary)),
-        ),
-      );
-}
-
-class _EvalRow extends StatelessWidget {
-  const _EvalRow({required this.evaluation, required this.today});
-
-  final domain.Evaluation evaluation;
-  final DateTime today;
-
-  @override
-  Widget build(BuildContext context) {
-    final b = Theme.of(context).brightness;
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: SpaceTokens.s),
-      child: Row(
-        children: [
-          Icon(Icons.event_note_outlined, size: IconTokens.sizeL, color: ColorTokens.accentAttention.of(b)),
-          SizedBox(width: SpaceTokens.m),
-          Expanded(child: Text(evaluation.name, style: context.type(TypeTokens.bodyS))),
-          Text(
-            dueLabel(evaluation.date!, today),
-            style: context.type(TypeTokens.captionS, color: ColorTokens.textSecondary.of(b)),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 class _TaskRow extends ConsumerWidget {

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../core/format/numbers.dart';
+import '../../../domain/streaks/streaks.dart';
 import '../../../l10n/strings.g.dart';
 import '../../../theme/app_theme.dart';
 import '../../../theme/cascade.dart';
@@ -11,7 +11,7 @@ import '../../../theme/motion.dart';
 import '../../../theme/strike_through.dart';
 import '../../../theme/tokens.g.dart';
 import '../../../theme/transitions.dart';
-import '../../import/presentation/import_pdf_screen.dart';
+import '../../import/presentation/import_screen.dart';
 import '../../mascot/mascot_error.dart';
 import '../../mascot/mascot_loader.dart';
 import '../../settings/presentation/settings_screen.dart';
@@ -20,12 +20,12 @@ import '../application/subjects_providers.dart';
 import 'subject_actions.dart';
 import 'subject_form_screen.dart';
 
-/// La pestaña Materias: todo el semestre en una lista.
+/// La pestaña Actividades: todo lo que se repite en tu semana, en una lista.
 ///
-/// Cada tarjeta contesta de un vistazo las dos preguntas que importan: cuántas
-/// faltas te quedan y cómo vas de nota. Sin mascota: la lista de pantallas
-/// permitidas del contrato no la incluye, salvo si la carga falla (`error de
-/// carga`).
+/// Cada tarjeta contesta de un vistazo las dos preguntas que importan: cuántos
+/// saltos te quedan y cuántas semanas llevas cumpliendo. Sin mascota: la lista
+/// de pantallas permitidas del contrato no la incluye, salvo si la carga falla
+/// (`error de carga`).
 class SubjectsScreen extends ConsumerWidget {
   const SubjectsScreen({super.key});
 
@@ -33,7 +33,7 @@ class SubjectsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final subjects = ref.watch(subjectsOverviewProvider);
 
-    // En tablet la lista es el panel maestro y la materia se abre al lado,
+    // En tablet la lista es el panel maestro y la actividad se abre al lado,
     // sin salir de la pantalla. Tocar una fila cambia el panel derecho.
     if (context.sizeClass.isExpanded) {
       final list = subjects.valueOrNull ?? const <SubjectCard>[];
@@ -86,9 +86,9 @@ class _ListScaffold extends ConsumerWidget {
         title: const Text(SSubjects.title),
         actions: [
           IconButton(
-            onPressed: () => openImportPdf(context),
-            tooltip: SPdfPicker.title,
-            icon: const Icon(Icons.upload_file_outlined),
+            onPressed: () => openImport(context),
+            tooltip: SImportPicker.title,
+            icon: const Icon(Icons.event_available_outlined),
           ),
           IconButton(
             onPressed: () => openSettings(context),
@@ -115,7 +115,7 @@ class _ListScaffold extends ConsumerWidget {
   }
 }
 
-/// Abre el formulario de materia. Se expone como función para que la tarjeta,
+/// Abre el formulario de actividad. Se expone como función para que la tarjeta,
 /// el FAB y el estado vacío usen exactamente la misma ruta.
 Future<void> openSubjectForm(BuildContext context, {int? subjectId}) {
   return Navigator.of(context).push<void>(
@@ -133,8 +133,8 @@ class _List extends StatelessWidget {
   Widget build(BuildContext context) {
     final guard = MotionGuard.of(context);
     final b = Theme.of(context).brightness;
-    // Las canceladas llegan al final (así las ordena el DAO). El conteo del
-    // semestre es de las que sigues cursando.
+    // Las pausadas llegan al final (así las ordena el DAO). El conteo es de
+    // las que siguen en tu agenda.
     final active = subjects.where((c) => !c.subject.cancelada).toList();
     final cancelled = subjects.where((c) => c.subject.cancelada).toList();
     final rows = <Object>[...active, if (cancelled.isNotEmpty) _cancelledLabel, ...cancelled];
@@ -151,8 +151,8 @@ class _List extends StatelessWidget {
       separatorBuilder: (_, __) => SizedBox(height: SpaceTokens.cardGap),
       itemBuilder: (context, i) {
         if (i == 0) {
-          // NumberRollIn: el número de materias anima como odómetro cuando
-          // cambia (añadir / borrar materia). El texto que lo acompaña es
+          // NumberRollIn: el número de actividades anima como odómetro cuando
+          // cambia (añadir / borrar una). El texto que lo acompaña es
           // estático: solo el entero salta.
           return Padding(
             padding: EdgeInsets.only(bottom: SpaceTokens.xs),
@@ -175,7 +175,7 @@ class _List extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        // El string completo es «N materias»; quitamos el número
+                        // El string completo es «N actividades»; quitamos el número
                         // del inicio para que NumberRollIn lo anime solo.
                         SSubjects.count(n: active.length)
                             .replaceFirst('${active.length}', ''),
@@ -209,7 +209,7 @@ class _List extends StatelessWidget {
   }
 }
 
-/// Marca de la sección de canceladas dentro de la lista mixta de filas.
+/// Marca de la sección de pausadas dentro de la lista mixta de filas.
 const Object _cancelledLabel = 'cancelled-label';
 
 class _SubjectTile extends ConsumerWidget {
@@ -321,17 +321,7 @@ class _SubjectTile extends ConsumerWidget {
                       style: context.type(TypeTokens.captionS, color: semaphore),
                     ),
                     const Spacer(),
-                    Text(
-                      card.hasGrades
-                          ? SSubjects.gradeShort(n: Numbers.grade(card.grades.accumulated))
-                          : SSubjects.gradeNone,
-                      style: context.type(
-                        TypeTokens.captionS,
-                        color: card.hasGrades
-                            ? ColorTokens.textSecondary.of(b)
-                            : ColorTokens.textTertiary.of(b),
-                      ),
-                    ),
+                    if (!cancelled) _StreakLabel(streak: card.streak),
                   ],
                 ),
               ],
@@ -339,6 +329,36 @@ class _SubjectTile extends ConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// «Racha de 4 semanas», con una llama que solo se enciende si hay racha.
+class _StreakLabel extends StatelessWidget {
+  const _StreakLabel({required this.streak});
+  final Streak streak;
+
+  @override
+  Widget build(BuildContext context) {
+    final b = Theme.of(context).brightness;
+    final n = streak.current;
+    final color = n > 0 ? ColorTokens.textSecondary.of(b) : ColorTokens.textTertiary.of(b);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (n > 0) ...[
+          Icon(Icons.local_fire_department_outlined, size: IconTokens.sizeXs, color: ColorTokens.accentAttention.of(b)),
+          SizedBox(width: SpaceTokens.xs),
+        ],
+        Text(
+          switch (n) {
+            0 => SSubjects.streakShortNone,
+            1 => SSubjects.streakShortOne,
+            _ => SSubjects.streakShort(n: n),
+          },
+          style: context.type(TypeTokens.captionS, color: color),
+        ),
+      ],
     );
   }
 }
@@ -418,7 +438,7 @@ class _Empty extends StatelessWidget {
             ),
             SizedBox(height: SpaceTokens.s),
             OutlinedButton(
-              onPressed: () => openImportPdf(context),
+              onPressed: () => openImport(context),
               child: const Text(SOnboarding.ctaImport),
             ),
           ],

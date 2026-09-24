@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- GENERADO por tool/gen_tokens.dart desde design/tokens.json. NO EDITAR A MANO. -->
 <resources>
-    <string name="widget_picker_next">Próxima clase</string>
-    <string name="widget_picker_next_desc">A qué hora salir y a qué salón.</string>
+    <string name="widget_picker_next">Próxima actividad</string>
+    <string name="widget_picker_next_desc">A qué hora salir y hacia dónde.</string>
     <string name="widget_picker_today">Tu día</string>
-    <string name="widget_picker_today_desc">Las clases de hoy, con la que sigue resaltada.</string>
+    <string name="widget_picker_today_desc">Lo de hoy, con lo que sigue resaltado.</string>
     <string name="widget_picker_pending">Pendientes</string>
-    <string name="widget_picker_pending_desc">Evaluaciones y tareas por materia.</string>
+    <string name="widget_picker_pending_desc">Lo que falta por hacer en cada actividad.</string>
 </resources>

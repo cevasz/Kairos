@@ -60,41 +60,42 @@ final createClockAlarmsProvider = Provider<Future<int?> Function()>((ref) {
   };
 });
 
-/// Mantiene programados los avisos de la víspera de cada evaluación. Se
-/// activa con un `ref.watch` en la raíz de la app, igual que los widgets.
-final evalRemindersSyncProvider = Provider<void>((ref) {
+/// Mantiene programados los avisos de la víspera de cada pendiente con
+/// fecha. Se activa con un `ref.watch` en la raíz de la app, igual que los
+/// widgets. El ajuste sigue en la columna `alarmaEvaluaciones` (herencia).
+final pendingRemindersSyncProvider = Provider<void>((ref) {
   if (kIsWeb || !Platform.isAndroid) return;
   final settings = ref.watch(settingsProvider).valueOrNull;
   final pending = ref.watch(pendingProvider).valueOrNull;
   if (settings == null || pending == null) return;
 
-  final evaluations = settings.alarmaEvaluaciones
+  final dated = settings.alarmaEvaluaciones
       ? [
           for (final p in pending)
-            if (p.evaluation != null && p.evaluation!.fecha != null)
-              DatedEvaluation(
-                id: p.evaluation!.id,
-                name: p.evaluation!.nombre,
+            if (p.fecha != null)
+              DatedPending(
+                id: p.task.id,
+                name: p.titulo,
                 subject: p.subject.nombre,
-                date: p.evaluation!.fecha!,
+                date: p.fecha!,
               ),
         ]
-      : const <DatedEvaluation>[];
+      : const <DatedPending>[];
 
-  final reminders = AlarmPlanner.evaluationReminders(
-    evaluations: evaluations,
+  final reminders = AlarmPlanner.pendingReminders(
+    pending: dated,
     reminderMinute: settings.avisoEvaluacionMin,
     now: DateTime.now(),
   );
   unawaited(ref.read(alarmChannelProvider).scheduleReminders(
-        channelName: SAlarms.evals,
+        channelName: SAlarms.pending,
         items: [
           for (final r in reminders)
             (
-              id: r.evaluation.id,
+              id: r.pending.id,
               at: r.at,
-              title: SAlarms.evalTitle(eval: r.evaluation.name),
-              body: SAlarms.evalBodyNoTime(clase: r.evaluation.subject),
+              title: SAlarms.pendingTitle(pendiente: r.pending.name),
+              body: SAlarms.pendingBody(actividad: r.pending.subject),
             ),
         ],
       ));
